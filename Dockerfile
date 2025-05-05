@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install Python dependencies
 COPY app/requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --user -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 # Stage 2: Runtime Stage
 FROM python:3.11-slim
@@ -51,6 +51,14 @@ COPY app/ .
 
 # Set environment variables
 ENV PATH="/root/.local/bin:${PATH}"
+
+RUN git clone git@github.com:Mennatalla-Khougha/roadmap-tasks.git
+
+RUN cp firebase_key.json roadmap-tasks/
+
+RUN cd roadmap-tasks/
+
+WORKDIR /app/roadmap-tasks
 
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--reload"]
