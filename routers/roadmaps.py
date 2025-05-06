@@ -6,7 +6,6 @@ from services.roadmap_service import (
     get_all_roadmaps,
     get_all_roadmaps_ids,
     get_roadmap,
-    get_roadmaps_paginated,
     update_roadmap,
     delete_roadmap,
     delete_all_roadmaps
@@ -46,19 +45,19 @@ async def get_all_roadmaps_endpoint():
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
     
 
-@router.get("/roadmaps")
-async def get_roadmaps(
-    limit: int = Query(1, ge=1, le=10),
-    cursor: str = Query(None)
-):
-    result = await get_roadmaps_paginated(limit=limit, last_doc_id=cursor)
-    return {
-        "roadmaps": result["roadmaps"],
-        "pagination": {
-            "next_cursor": result["next_cursor"],
-            "has_more": result["has_more"]
-        }
-    }
+# @router.get("/roadmaps")
+# async def get_roadmaps(
+#     limit: int = Query(1, ge=1, le=10),
+#     cursor: str = Query(None)
+# ):
+#     result = await get_roadmaps_paginated(limit=limit, last_doc_id=cursor)
+#     return {
+#         "roadmaps": result["roadmaps"],
+#         "pagination": {
+#             "next_cursor": result["next_cursor"],
+#             "has_more": result["has_more"]
+#         }
+#     }
 
 @router.get("/{roadmap_id}", response_model=Roadmap)
 async def get_roadmap_endpoint(roadmap_id: str):

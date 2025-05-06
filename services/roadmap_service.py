@@ -1,9 +1,11 @@
+import json
 import re
 from datetime import datetime
 from models.roadmap_model import Roadmap, Topic, Task
 from core.database import db
 from core.exceptions import RoadmapError, TopicNotFoundError, TaskNotFoundError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
+from core.database import r
 
 
 def generate_id(title: str) -> str:
@@ -84,97 +86,107 @@ async def get_all_roadmaps_ids() -> list[str]:
 async def get_all_roadmaps() -> list[Roadmap]:
     """Fetch all roadmaps with improved performance using concurrent fetching"""
     try:
-        # Fetch all roadmaps
-        docs = await asyncio.to_thread(
-            lambda: list(db.collection("roadmaps").stream())
-        )
+        # # Fetch all roadmaps
+        # docs = await asyncio.to_thread(
+        #     lambda: list(db.collection("roadmaps").stream())
+        # )
         
-        # Create tasks for fetching all roadmaps concurrently
-        roadmap_tasks = []
-        for doc in docs:
-            roadmap_id = doc.id
-            roadmap_tasks.append(get_roadmap(roadmap_id))
+        # # Create tasks for fetching all roadmaps concurrently
+        # roadmap_tasks = []
+        # for doc in docs:
+        #     roadmap_id = doc.id
+        #     roadmap_tasks.append(get_roadmap(roadmap_id))
         
-        # Execute all tasks concurrently
-        roadmaps = await asyncio.gather(*roadmap_tasks)
+        # # Execute all tasks concurrently
+        # roadmaps = await asyncio.gather(*roadmap_tasks)
         
+        # return roadmaps
+        ids_list = await get_all_roadmaps_ids()
+        roadmaps = []
+        for id in ids_list:
+            cached_roadmap = r.get(id)
+            if cached_roadmap:
+                roadmap_dict = json.loads(cached_roadmap)
+                roadmaps.append(Roadmap(**roadmap_dict))
+            else:
+                roadmaps.append(await get_roadmap(id))
         return roadmaps
     
     except RoadmapError as e:
         raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
 
-async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None, 
-                                           fetch_details: bool = False) -> dict:
-    """
-    Fetch roadmaps with pagination and concurrent processing
+# async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None, 
+#                                            fetch_details: bool = False) -> dict:
+#     """
+#     Fetch roadmaps with pagination and concurrent processing
     
-    Args:
-        limit: Number of roadmaps to fetch at once
-        last_doc_id: ID of the last document from previous page
-        fetch_details: Whether to fetch complete roadmap details or just basic info
+#     Args:
+#         limit: Number of roadmaps to fetch at once
+#         last_doc_id: ID of the last document from previous page
+#         fetch_details: Whether to fetch complete roadmap details or just basic info
     
-    Returns:
-        Dict containing roadmaps, next_cursor and has_more flag
-    """
-    try:
-        # Start with basic query
-        query = db.collection("roadmaps").order_by("title")
+#     Returns:
+#         Dict containing roadmaps, next_cursor and has_more flag
+#     """
+#     try:
+#         # Start with basic query
+#         query = db.collection("roadmaps").order_by("title")
         
-        # Apply pagination
-        if last_doc_id:
-            # Get the last document as a reference point
-            last_doc = await asyncio.to_thread(
-                lambda: db.collection("roadmaps").document(last_doc_id).get()
-            )
-            if not last_doc.exists:
-                raise RoadmapError(f"Invalid pagination token: {last_doc_id}")
+#         # Apply pagination
+#         if last_doc_id:
+#             # Get the last document as a reference point
+#             last_doc = await asyncio.to_thread(
+#                 lambda: db.collection("roadmaps").document(last_doc_id).get()
+#             )
+#             if not last_doc.exists:
+#                 raise RoadmapError(f"Invalid pagination token: {last_doc_id}")
                 
-            # Start after the last document
-            query = query.start_after(last_doc)
+#             # Start after the last document
+#             query = query.start_after(last_doc)
             
-        # Apply limit to query
-        query = query.limit(limit + 1)  # Get one extra to check if there are more
+#         # Apply limit to query
+#         query = query.limit(limit + 1)  # Get one extra to check if there are more
         
-        # Execute query
-        docs = await asyncio.to_thread(lambda: list(query.stream()))
+#         # Execute query
+#         docs = await asyncio.to_thread(lambda: list(query.stream()))
         
-        # Check if there are more results
-        has_more = len(docs) > limit
-        if has_more:
-            docs = docs[:limit]  # Remove the extra document
+#         # Check if there are more results
+#         has_more = len(docs) > limit
+#         if has_more:
+#             docs = docs[:limit]  # Remove the extra document
             
-        # Set the next cursor (if there are more results)
-        next_cursor = docs[-1].id if has_more and docs else None
+#         # Set the next cursor (if there are more results)
+#         next_cursor = docs[-1].id if has_more and docs else None
             
-        roadmaps = []
+#         roadmaps = []
         
-        if fetch_details:
-            # Create tasks for fetching roadmap details concurrently
-            roadmap_tasks = [get_roadmap(doc.id) for doc in docs]
+#         if fetch_details:
+#             # Create tasks for fetching roadmap details concurrently
+#             roadmap_tasks = [get_roadmap(doc.id) for doc in docs]
             
-            # Execute all tasks concurrently
-            roadmaps = await asyncio.gather(*roadmap_tasks)
-        else:
-            # Just create basic roadmap objects without details
-            for doc in docs:
-                data = doc.to_dict()
-                roadmaps.append(Roadmap(
-                    id=doc.id,
-                    title=data.get("title", ""),
-                    description=data.get("description", ""),
-                    total_duration_weeks=data.get("total_duration_weeks", 0),
-                    topics=[]  # Empty topics list
-                ))
+#             # Execute all tasks concurrently
+#             roadmaps = await asyncio.gather(*roadmap_tasks)
+#         else:
+#             # Just create basic roadmap objects without details
+#             for doc in docs:
+#                 data = doc.to_dict()
+#                 roadmaps.append(Roadmap(
+#                     id=doc.id,
+#                     title=data.get("title", ""),
+#                     description=data.get("description", ""),
+#                     total_duration_weeks=data.get("total_duration_weeks", 0),
+#                     topics=[]  # Empty topics list
+#                 ))
             
-        return {
-            "roadmaps": roadmaps,
-            "next_cursor": next_cursor,
-            "has_more": has_more
-        }
+#         return {
+#             "roadmaps": roadmaps,
+#             "next_cursor": next_cursor,
+#             "has_more": has_more
+#         }
         
-    except RoadmapError as e:
-        raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
+#     except RoadmapError as e:
+#         raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
 
 # async def get_all_roadmap_topics(roadmap_id: str) -> list[Topic]:
@@ -229,6 +241,11 @@ async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None,
 
 async def get_roadmap(roadmap_id: str) -> Roadmap:
     try:
+        cached_roadmap = r.get(roadmap_id)
+        if cached_roadmap:
+          roadmap_dict = json.loads(cached_roadmap)
+          return Roadmap(**roadmap_dict)
+
         # Fetch the roadmap document
         doc = await asyncio.to_thread(
             lambda: db.collection("roadmaps").document(roadmap_id).get()
@@ -236,7 +253,7 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
 
         if not doc.exists:
             raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
-
+ 
         roadmap_data = doc.to_dict()
         roadmap = Roadmap(id=roadmap_id, **roadmap_data)
 
@@ -266,16 +283,20 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
         )
 
         roadmap.topics = topics
+        serialized_roadmap = json.dumps(roadmap.model_dump())
+        r.set(roadmap_id, serialized_roadmap, ex=15)
+        
         return roadmap
 
     except RoadmapNotFoundError:
-        raise
+        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
     except Exception as e:
         raise Exception(f"Unexpected Error: {str(e)}")
 
 
 async def delete_roadmap(roadmap_id: str) -> dict:
     try:
+        r.delete(roadmap_id)
         roadmap_ref = db.collection("roadmaps").document(roadmap_id)
 
         # Check if the roadmap exists
@@ -316,9 +337,9 @@ async def delete_roadmap(roadmap_id: str) -> dict:
         raise Exception(f"Unexpected Error during deletion: {str(e)}")
 
 
-
 async def delete_all_roadmaps() -> dict:
     try:
+        r.flushall()
         # Fetch all roadmap documents
         roadmap_docs = await asyncio.to_thread(lambda: list(db.collection("roadmaps").stream()))
 
@@ -356,9 +377,9 @@ async def delete_all_roadmaps() -> dict:
         raise Exception(f"Unexpected error during deletion: {str(e)}")
 
 
-
 async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
     try:
+        r.delete(roadmap_id)
         roadmap_ref = db.collection("roadmaps").document(roadmap_id)
 
         # Update roadmap fields
@@ -396,6 +417,8 @@ async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
         # Update all topics concurrently
         await asyncio.gather(*[update_topic(topic) for topic in roadmap.topics])
 
+        serialized_roadmap = json.dumps(roadmap.model_dump())
+        r.set(roadmap_id, serialized_roadmap, ex=15)
         return {"message": "Roadmap updated successfully"}
 
     except Exception as e:
