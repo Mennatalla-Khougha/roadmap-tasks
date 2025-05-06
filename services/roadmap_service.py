@@ -225,33 +225,70 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
 
 
 async def delete_roadmap(roadmap_id: str) -> dict:
-    # Delete a specific roadmap
     try:
-        # Run Firestore delete() in a thread-safe way
-        doc = await asyncio.to_thread(
-            lambda: db.collection("roadmaps").document(roadmap_id).delete()
-        )
-        return {"message": "Roadmap deleted successfully"}
+        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
+
+        # Check if the roadmap exists
+        doc = await asyncio.to_thread(roadmap_ref.get)
+        if not doc.exists:
+            raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
+
+        # Get all topics
+        topics = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
+        for topic in topics:
+            topic_id = topic.id
+            topic_ref = roadmap_ref.collection("topics").document(topic_id)
+
+            # Get all tasks for this topic
+            tasks = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+            for task in tasks:
+                await asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+
+            # Delete the topic
+            await asyncio.to_thread(lambda: topic_ref.delete())
+
+        # Delete the roadmap document
+        await asyncio.to_thread(lambda: roadmap_ref.delete())
+
+        return {"message": "Roadmap and all related data deleted successfully"}
+
+    except RoadmapNotFoundError as e:
+        raise e
     except Exception as e:
-        # Handling Firestore errors, such as if the roadmap doesn't exist
-        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found: {str(e)}")
+        raise Exception(f"Unexpected Error during deletion: {str(e)}")
+
 
 
 async def delete_all_roadmaps() -> dict:
-    # Delete all roadmaps
     try:
-        # Run Firestore stream in a thread-safe way
+        # Get all roadmaps
         docs = await asyncio.to_thread(lambda: list(db.collection("roadmaps").stream()))
 
+        # Delete each roadmap and its subcollections (topics, tasks)
         for doc in docs:
-            # Run Firestore delete in a thread-safe way
-            await asyncio.to_thread(lambda: doc.reference.delete())
+            roadmap_ref = doc.reference
 
-        return {"message": "All roadmaps deleted successfully"}
+            # Get all topics for the current roadmap
+            topics = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
+            for topic in topics:
+                topic_ref = roadmap_ref.collection("topics").document(topic.id)
+
+                # Get all tasks for this topic and delete them
+                tasks = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+                for task in tasks:
+                    await asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+
+                # Delete the topic
+                await asyncio.to_thread(lambda: topic_ref.delete())
+
+            # Delete the roadmap document
+            await asyncio.to_thread(lambda: roadmap_ref.delete())
+
+        return {"message": "All roadmaps and related data deleted successfully"}
 
     except Exception as e:
-        # Handle any errors (e.g., if no roadmaps exist)
         raise RoadmapNotFoundError(f"Roadmaps not found: {str(e)}")
+
 
 
 async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
