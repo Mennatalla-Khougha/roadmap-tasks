@@ -2,15 +2,15 @@ from pydantic import BaseModel, Field
 
 class Task(BaseModel):
     id: str | None = None
-    title: str
+    task: str
     description: str | None = None
-    estimated_time: str | None = None
+    duration_minutes: int | None = None
 
 class Topic(BaseModel):
     id: str | None = None
     title: str
     description: str | None = None
-    estimated_time: str | None = None
+    duration_days: int | None = None
     resources: list[str] = Field(default_factory=list)
     tasks: list[Task] = Field(default_factory=list)
 
@@ -18,5 +18,5 @@ class Roadmap(BaseModel):
     id: str | None = None
     title: str
     description: str | None = None
-    total_estimated_time: str | None = None
+    total_duration_weeks: int | None = None
     topics: list[Topic] = Field(default_factory=list)
