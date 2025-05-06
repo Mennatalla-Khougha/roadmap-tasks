@@ -17,49 +17,47 @@ def generate_id(title: str) -> str:
     return title
 
 
+from google.cloud import firestore
+
+# Initialize Firestore client
+db = firestore.Client()
+
 async def create_roadmap(roadmap: Roadmap) -> dict:
-    # Create a new roadmap
+    # Create roadmap
     try:
-        if roadmap.id:
-            roadmap_id = roadmap.id
-        else:
-            roadmap_id = generate_id(roadmap.title)
+        # Generate roadmap ID if not provided
+        roadmap_id = roadmap.id if roadmap.id else generate_id(roadmap.title)
+
+        # Create batch for Firestore
+        batch = db.batch()
 
         # Set roadmap document
-        await asyncio.to_thread(
-            db.collection("roadmaps").document(roadmap_id).set,
-            {
-                "title": roadmap.title,
-                "description": roadmap.description,
-                "total_duration_weeks": roadmap.total_duration_weeks,
-            }
-        )
+        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
+        batch.set(roadmap_ref, {
+            "title": roadmap.title,
+            "description": roadmap.description,
+            "total_duration_weeks": roadmap.total_duration_weeks,
+        })
 
+        # Loop through topics and add them to batch
         for topic in roadmap.topics:
             topic_id = topic.id if topic.id else generate_id(topic.title)
+            topic_ref = roadmap_ref.collection("topics").document(topic_id)
+            batch.set(topic_ref, {
+                "title": topic.title,
+                "description": topic.description,
+                "duration_days": topic.duration_days,
+                "resources": topic.resources
+            })
 
-            # Set topic document
-            await asyncio.to_thread(
-                db.collection("roadmaps").document(roadmap_id)
-                  .collection("topics").document(topic_id).set,
-                {
-                    "title": topic.title,
-                    "description": topic.description,
-                    "duration_days": topic.duration_days,
-                    "resources": topic.resources
-                }
-            )
-
+            # Loop through tasks and add them to batch
             for task in topic.tasks:
                 task_id = task.id if task.id else generate_id(task.task)
+                task_ref = topic_ref.collection("tasks").document(task_id)
+                batch.set(task_ref, task.model_dump())
 
-                # Set task document
-                await asyncio.to_thread(
-                    db.collection("roadmaps").document(roadmap_id)
-                      .collection("topics").document(topic_id)
-                      .collection("tasks").document(task_id).set,
-                    task.model_dump()
-                )
+        # Commit all batched operations
+        await asyncio.to_thread(batch.commit)
 
         return {"roadmap_id": roadmap_id, "roadmap_title": roadmap.title}
 
@@ -84,48 +82,97 @@ async def get_all_roadmaps_ids() -> list[str]:
 
 
 async def get_all_roadmaps() -> list[Roadmap]:
-    # Fetch all roadmaps
+    """Fetch all roadmaps with improved performance using concurrent fetching"""
     try:
-        roadmaps = []
-
-        # Fetch all roadmaps (synchronously, wrapped in a thread)
+        # Fetch all roadmaps
         docs = await asyncio.to_thread(
             lambda: list(db.collection("roadmaps").stream())
-            )
-
+        )
+        
+        # Create tasks for fetching all roadmaps concurrently
+        roadmap_tasks = []
         for doc in docs:
-            doc_data = doc.to_dict()
             roadmap_id = doc.id
-
-            # Fetch all topics for this roadmap
-            topics_ref = db.collection("roadmaps").document(roadmap_id)\
-              .collection("topics")
-            topic_docs = await asyncio.to_thread(
-                lambda: list(topics_ref.stream())
-                )
-            topics = []
-
-            for topic_doc in topic_docs:
-                topic_data = topic_doc.to_dict()
-                topic_id = topic_doc.id
-
-                # Fetch all tasks for this topic
-                task_docs = await asyncio.to_thread(lambda: list(
-                    topics_ref.document(topic_id).collection("tasks").stream()
-                ))
-
-                tasks = []
-                for task_doc in task_docs:
-                    task_data = task_doc.to_dict()
-                    task_data.pop("id", None)
-                    tasks.append(Task(id=task_doc.id, **task_data))
-
-                topics.append(Topic(id=topic_id, tasks=tasks, **topic_data))
-
-            roadmaps.append(Roadmap(id=roadmap_id, topics=topics, **doc_data))
-
+            roadmap_tasks.append(get_roadmap(roadmap_id))
+        
+        # Execute all tasks concurrently
+        roadmaps = await asyncio.gather(*roadmap_tasks)
+        
         return roadmaps
+    
+    except RoadmapError as e:
+        raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
+
+async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None, 
+                                           fetch_details: bool = False) -> dict:
+    """
+    Fetch roadmaps with pagination and concurrent processing
+    
+    Args:
+        limit: Number of roadmaps to fetch at once
+        last_doc_id: ID of the last document from previous page
+        fetch_details: Whether to fetch complete roadmap details or just basic info
+    
+    Returns:
+        Dict containing roadmaps, next_cursor and has_more flag
+    """
+    try:
+        # Start with basic query
+        query = db.collection("roadmaps").order_by("title")
+        
+        # Apply pagination
+        if last_doc_id:
+            # Get the last document as a reference point
+            last_doc = await asyncio.to_thread(
+                lambda: db.collection("roadmaps").document(last_doc_id).get()
+            )
+            if not last_doc.exists:
+                raise RoadmapError(f"Invalid pagination token: {last_doc_id}")
+                
+            # Start after the last document
+            query = query.start_after(last_doc)
+            
+        # Apply limit to query
+        query = query.limit(limit + 1)  # Get one extra to check if there are more
+        
+        # Execute query
+        docs = await asyncio.to_thread(lambda: list(query.stream()))
+        
+        # Check if there are more results
+        has_more = len(docs) > limit
+        if has_more:
+            docs = docs[:limit]  # Remove the extra document
+            
+        # Set the next cursor (if there are more results)
+        next_cursor = docs[-1].id if has_more and docs else None
+            
+        roadmaps = []
+        
+        if fetch_details:
+            # Create tasks for fetching roadmap details concurrently
+            roadmap_tasks = [get_roadmap(doc.id) for doc in docs]
+            
+            # Execute all tasks concurrently
+            roadmaps = await asyncio.gather(*roadmap_tasks)
+        else:
+            # Just create basic roadmap objects without details
+            for doc in docs:
+                data = doc.to_dict()
+                roadmaps.append(Roadmap(
+                    id=doc.id,
+                    title=data.get("title", ""),
+                    description=data.get("description", ""),
+                    total_duration_weeks=data.get("total_duration_weeks", 0),
+                    topics=[]  # Empty topics list
+                ))
+            
+        return {
+            "roadmaps": roadmaps,
+            "next_cursor": next_cursor,
+            "has_more": has_more
+        }
+        
     except RoadmapError as e:
         raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
@@ -181,47 +228,50 @@ async def get_all_roadmaps() -> list[Roadmap]:
 
 
 async def get_roadmap(roadmap_id: str) -> Roadmap:
-    # Fetch a specific roadmap
     try:
-        # Run Firestore get() in a thread-safe way
+        # Fetch the roadmap document
         doc = await asyncio.to_thread(
             lambda: db.collection("roadmaps").document(roadmap_id).get()
         )
+
         if not doc.exists:
             raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
 
         roadmap_data = doc.to_dict()
         roadmap = Roadmap(id=roadmap_id, **roadmap_data)
 
-        # Fetch topics for the roadmap
+        # Reference to topics collection
         topic_ref = db.collection("roadmaps").document(roadmap_id).collection("topics")
         topic_docs = await asyncio.to_thread(lambda: list(topic_ref.stream()))
-        topics = []
 
-        for topic_doc in topic_docs:
+        async def fetch_topic_with_tasks(topic_doc) -> Topic:
             topic_data = topic_doc.to_dict()
             topic_id = topic_doc.id
-            topic_data.pop("id", None)  # Avoid duplicate key
+            topic_data.pop("id", None)
 
-            # Fetch tasks for each topic
+            # Fetch tasks for this topic
             task_ref = topic_ref.document(topic_id).collection("tasks")
             task_docs = await asyncio.to_thread(lambda: list(task_ref.stream()))
-            tasks = []
-            for task_doc in task_docs:
-                task_data = task_doc.to_dict()
-                task_data.pop("id", None)  # Avoid duplicate key
-                tasks.append(Task(id=task_doc.id, **task_data))
 
-            topics.append(Topic(id=topic_id, tasks=tasks, **topic_data))
+            tasks = [
+                Task(id=task_doc.id, **{k: v for k, v in task_doc.to_dict().items() if k != "id"})
+                for task_doc in task_docs
+            ]
+
+            return Topic(id=topic_id, tasks=tasks, **topic_data)
+
+        # Fetch all topics with tasks concurrently
+        topics: list[Topic] = await asyncio.gather(
+            *[fetch_topic_with_tasks(doc) for doc in topic_docs]
+        )
 
         roadmap.topics = topics
         return roadmap
 
-    except RoadmapNotFoundError as e:
-        raise e
+    except RoadmapNotFoundError:
+        raise
     except Exception as e:
         raise Exception(f"Unexpected Error: {str(e)}")
-
 
 
 async def delete_roadmap(roadmap_id: str) -> dict:
@@ -233,27 +283,35 @@ async def delete_roadmap(roadmap_id: str) -> dict:
         if not doc.exists:
             raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
 
-        # Get all topics
-        topics = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
-        for topic in topics:
-            topic_id = topic.id
+        # Get all topics under the roadmap
+        topic_docs = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
+
+        async def delete_topic_and_tasks(topic_doc):
+            topic_id = topic_doc.id
             topic_ref = roadmap_ref.collection("topics").document(topic_id)
 
-            # Get all tasks for this topic
-            tasks = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
-            for task in tasks:
-                await asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+            # Get all tasks under the topic
+            task_docs = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+
+            # Delete all tasks concurrently
+            await asyncio.gather(*[
+                asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+                for task in task_docs
+            ])
 
             # Delete the topic
-            await asyncio.to_thread(lambda: topic_ref.delete())
+            await asyncio.to_thread(topic_ref.delete)
 
-        # Delete the roadmap document
-        await asyncio.to_thread(lambda: roadmap_ref.delete())
+        # Delete all topics and their tasks concurrently
+        await asyncio.gather(*[delete_topic_and_tasks(topic) for topic in topic_docs])
+
+        # Finally, delete the roadmap
+        await asyncio.to_thread(roadmap_ref.delete)
 
         return {"message": "Roadmap and all related data deleted successfully"}
 
-    except RoadmapNotFoundError as e:
-        raise e
+    except RoadmapNotFoundError:
+        raise
     except Exception as e:
         raise Exception(f"Unexpected Error during deletion: {str(e)}")
 
@@ -261,78 +319,87 @@ async def delete_roadmap(roadmap_id: str) -> dict:
 
 async def delete_all_roadmaps() -> dict:
     try:
-        # Get all roadmaps
-        docs = await asyncio.to_thread(lambda: list(db.collection("roadmaps").stream()))
+        # Fetch all roadmap documents
+        roadmap_docs = await asyncio.to_thread(lambda: list(db.collection("roadmaps").stream()))
 
-        # Delete each roadmap and its subcollections (topics, tasks)
-        for doc in docs:
-            roadmap_ref = doc.reference
+        async def delete_single_roadmap(roadmap_doc):
+            roadmap_ref = roadmap_doc.reference
 
-            # Get all topics for the current roadmap
-            topics = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
-            for topic in topics:
-                topic_ref = roadmap_ref.collection("topics").document(topic.id)
+            # Fetch topics under this roadmap
+            topic_docs = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
 
-                # Get all tasks for this topic and delete them
-                tasks = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
-                for task in tasks:
-                    await asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+            async def delete_topic(topic_doc):
+                topic_ref = roadmap_ref.collection("topics").document(topic_doc.id)
 
-                # Delete the topic
-                await asyncio.to_thread(lambda: topic_ref.delete())
+                # Fetch and delete all tasks under this topic concurrently
+                task_docs = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+                await asyncio.gather(*[
+                    asyncio.to_thread(lambda ref=task_doc.reference: ref.delete())
+                    for task_doc in task_docs
+                ])
+
+                # Delete the topic itself
+                await asyncio.to_thread(topic_ref.delete)
+
+            # Delete all topics (and their tasks) concurrently
+            await asyncio.gather(*[delete_topic(topic_doc) for topic_doc in topic_docs])
 
             # Delete the roadmap document
-            await asyncio.to_thread(lambda: roadmap_ref.delete())
+            await asyncio.to_thread(roadmap_ref.delete)
+
+        # Delete all roadmaps concurrently
+        await asyncio.gather(*[delete_single_roadmap(doc) for doc in roadmap_docs])
 
         return {"message": "All roadmaps and related data deleted successfully"}
 
     except Exception as e:
-        raise RoadmapNotFoundError(f"Roadmaps not found: {str(e)}")
+        raise Exception(f"Unexpected error during deletion: {str(e)}")
 
 
 
 async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
-    # Update a specific roadmap
     try:
-        # Perform Firestore update in a thread-safe way
-        await asyncio.to_thread(
-            lambda: db.collection("roadmaps").document(roadmap_id).update({
-                "title": roadmap.title,
-                "description": roadmap.description,
-                "total_duration_weeks": roadmap.total_duration_weeks,
-            })
-        )
+        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
 
-        # Update topics
-        topic_ref = db.collection("roadmaps").document(roadmap_id).collection("topics")
-        for topic in roadmap.topics:
+        # Update roadmap fields
+        await asyncio.to_thread(roadmap_ref.update, {
+            "title": roadmap.title,
+            "description": roadmap.description,
+            "total_duration_weeks": roadmap.total_duration_weeks,
+        })
+
+        topic_ref = roadmap_ref.collection("topics")
+
+        async def update_topic(topic: Topic):
             topic_id = topic.id if topic.id else generate_id(topic.title)
+            topic_doc_ref = topic_ref.document(topic_id)
 
-            # Perform topic update in a thread-safe way
-            await asyncio.to_thread(
-                lambda: topic_ref.document(topic_id).update({
-                    "title": topic.title,
-                    "description": topic.description,
-                    "duration_days": topic.duration_days,
-                    "resources": topic.resources
-                })
-            )
+            # Use set(..., merge=True) to create or update
+            await asyncio.to_thread(topic_doc_ref.set, {
+                "title": topic.title,
+                "description": topic.description,
+                "duration_days": topic.duration_days,
+                "resources": topic.resources
+            }, merge=True)
 
-            # Update tasks for each topic
-            task_ref = topic_ref.document(topic_id).collection("tasks")
-            for task in topic.tasks:
+            task_ref = topic_doc_ref.collection("tasks")
+
+            async def update_task(task: Task):
                 task_id = task.id if task.id else generate_id(task.task)
+                task_doc_ref = task_ref.document(task_id)
 
-                # Perform task update in a thread-safe way
-                await asyncio.to_thread(
-                    lambda: task_ref.document(task_id).update(task.model_dump())
-                )
+                await asyncio.to_thread(task_doc_ref.set, task.model_dump(), True)
+
+            # Update all tasks concurrently
+            await asyncio.gather(*[update_task(task) for task in topic.tasks])
+
+        # Update all topics concurrently
+        await asyncio.gather(*[update_topic(topic) for topic in roadmap.topics])
 
         return {"message": "Roadmap updated successfully"}
 
     except Exception as e:
-        # Handle errors, such as if the roadmap doesn't exist
-        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found: {str(e)}")
+        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found or update failed: {str(e)}")
 
 
 # async def update_topic(roadmap_id: str, topic_id: str, topic: Topic) -> dict:
