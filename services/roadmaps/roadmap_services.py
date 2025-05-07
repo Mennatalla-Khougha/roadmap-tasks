@@ -2,10 +2,9 @@ import json
 import re
 from datetime import datetime
 from models.roadmap_model import Roadmap, Topic, Task
-from core.database import db
+from core.database import db, r
 from core.exceptions import RoadmapError, TopicNotFoundError, TaskNotFoundError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
-from core.database import r
 
 
 def generate_id(title: str) -> str:
@@ -19,13 +18,7 @@ def generate_id(title: str) -> str:
     return title
 
 
-from google.cloud import firestore
-
-# Initialize Firestore client
-db = firestore.Client()
-
 async def create_roadmap(roadmap: Roadmap) -> dict:
-    # Create roadmap
     try:
         # Generate roadmap ID if not provided
         roadmap_id = roadmap.id if roadmap.id else generate_id(roadmap.title)
@@ -34,29 +27,29 @@ async def create_roadmap(roadmap: Roadmap) -> dict:
         batch = db.batch()
 
         # Set roadmap document
+        roadmap_data = roadmap.model_dump(exclude={"topics"})
+        roadmap_data["id"] = roadmap_id
+        roadmap_data["description"] = roadmap_data.get("description", "")  # Default to empty string
         roadmap_ref = db.collection("roadmaps").document(roadmap_id)
-        batch.set(roadmap_ref, {
-            "title": roadmap.title,
-            "description": roadmap.description,
-            "total_duration_weeks": roadmap.total_duration_weeks,
-        })
+        batch.set(roadmap_ref, roadmap_data)
 
         # Loop through topics and add them to batch
         for topic in roadmap.topics:
             topic_id = topic.id if topic.id else generate_id(topic.title)
+            topic_data = topic.model_dump(exclude={"tasks"})
+            topic_data["id"] = topic_id
+            topic_data["description"] = topic_data.get("description", "")  # Default to empty string
             topic_ref = roadmap_ref.collection("topics").document(topic_id)
-            batch.set(topic_ref, {
-                "title": topic.title,
-                "description": topic.description,
-                "duration_days": topic.duration_days,
-                "resources": topic.resources
-            })
+            batch.set(topic_ref, topic_data)
 
             # Loop through tasks and add them to batch
             for task in topic.tasks:
                 task_id = task.id if task.id else generate_id(task.task)
                 task_ref = topic_ref.collection("tasks").document(task_id)
-                batch.set(task_ref, task.model_dump())
+                task_data = task.model_dump()
+                task_data["id"] = task_id
+                task_data["description"] = task_data.get("description", "")  # Default to empty string
+                batch.set(task_ref, task_data)
 
         # Commit all batched operations
         await asyncio.to_thread(batch.commit)
@@ -84,22 +77,8 @@ async def get_all_roadmaps_ids() -> list[str]:
 
 
 async def get_all_roadmaps() -> list[Roadmap]:
-    """Fetch all roadmaps with improved performance using concurrent fetching"""
+    # Fetch all roadmap
     try:
-        # # Fetch all roadmaps
-        # docs = await asyncio.to_thread(
-        #     lambda: list(db.collection("roadmaps").stream())
-        # )
-        
-        # # Create tasks for fetching all roadmaps concurrently
-        # roadmap_tasks = []
-        # for doc in docs:
-        #     roadmap_id = doc.id
-        #     roadmap_tasks.append(get_roadmap(roadmap_id))
-        
-        # # Execute all tasks concurrently
-        # roadmaps = await asyncio.gather(*roadmap_tasks)
-        
         # return roadmaps
         ids_list = await get_all_roadmaps_ids()
         roadmaps = []
@@ -240,6 +219,7 @@ async def get_all_roadmaps() -> list[Roadmap]:
 
 
 async def get_roadmap(roadmap_id: str) -> Roadmap:
+    # Fetch a specific roadmap by ID
     try:
         cached_roadmap = r.get(roadmap_id)
         if cached_roadmap:
@@ -255,6 +235,7 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
             raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
  
         roadmap_data = doc.to_dict()
+        roadmap_data.pop("id", None)
         roadmap = Roadmap(id=roadmap_id, **roadmap_data)
 
         # Reference to topics collection
