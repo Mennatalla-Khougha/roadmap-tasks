@@ -1,0 +1,276 @@
+{
+  "title": "Data Structures and Algorithms (DSA) Mastery Roadmap",
+  "total_duration_weeks": 10,
+  "topics": [
+    {
+      "title": "1. Introduction to DSA and Time Complexity",
+      "description": "Learn what DSA is, why it's important, and how to analyze code performance using Big-O notation.",
+      "duration_days": 2,
+      "resources": [
+        "https://www.geeksforgeeks.org/analysis-of-algorithms-set-1-asymptotic-analysis/",
+        "https://www.youtube.com/watch?v=Mo4vesaut8g"
+      ],
+      "tasks": [
+        {
+          "task": "Understand O(1), O(n), O(log n), O(n^2) etc.",
+          "duration_minutes": 60
+        },
+        {
+          "task": "Practice comparing time complexities of algorithms",
+          "duration_minutes": 45
+        }
+      ]
+    },
+    {
+      "title": "2. Arrays and Strings",
+      "description": "Understand static data structures and manipulation techniques.",
+      "duration_days": 3,
+      "resources": [
+        "https://www.geeksforgeeks.org/arrays-in-c-cpp/",
+        "https://leetcode.com/tag/array/",
+        "https://neetcode.io/roadmap"
+      ],
+      "tasks": [
+        {
+          "task": "Implement array reversal, rotation, and frequency count",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Solve 5 easy array problems on LeetCode",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Implement and practice string operations (palindrome, reverse, substrings)",
+          "duration_minutes": 90
+        }
+      ]
+    },
+    {
+      "title": "3. Searching and Sorting",
+      "description": "Master basic search/sort algorithms and their time complexities.",
+      "duration_days": 4,
+      "resources": [
+        "https://www.geeksforgeeks.org/sorting-algorithms/",
+        "https://visualgo.net/en/sorting",
+        "https://leetcode.com/tag/sorting/"
+      ],
+      "tasks": [
+        {
+          "task": "Implement Linear Search and Binary Search",
+          "duration_minutes": 60
+        },
+        {
+          "task": "Implement Bubble Sort, Selection Sort, Insertion Sort",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Implement Merge Sort and Quick Sort",
+          "duration_minutes": 180
+        },
+        {
+          "task": "Solve 5 sorting problems on LeetCode",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "4. Recursion and Backtracking",
+      "description": "Understand the fundamentals of recursion and apply it to problem-solving.",
+      "duration_days": 3,
+      "resources": [
+        "https://www.programiz.com/dsa/recursion",
+        "https://www.youtube.com/watch?v=NgHotbH9jG0",
+        "https://leetcode.com/tag/backtracking/"
+      ],
+      "tasks": [
+        {
+          "task": "Practice factorial, Fibonacci, and sum of digits using recursion",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Solve backtracking problems like N-Queens or Subset Sum",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "5. Linked Lists",
+      "description": "Learn how to implement and manipulate singly and doubly linked lists.",
+      "duration_days": 3,
+      "resources": [
+        "https://www.geeksforgeeks.org/data-structures/linked-list/",
+        "https://www.youtube.com/watch?v=njTh_OwMljA",
+        "https://leetcode.com/tag/linked-list/"
+      ],
+      "tasks": [
+        {
+          "task": "Implement Singly and Doubly Linked Lists from scratch",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Reverse a linked list, detect cycle",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Solve 5 linked list problems on LeetCode",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "6. Stacks and Queues",
+      "description": "Understand LIFO and FIFO structures and apply them to problems.",
+      "duration_days": 3,
+      "resources": [
+        "https://www.programiz.com/dsa/stack",
+        "https://www.programiz.com/dsa/queue",
+        "https://leetcode.com/tag/stack/",
+        "https://leetcode.com/tag/queue/"
+      ],
+      "tasks": [
+        {
+          "task": "Implement stack and queue using arrays or linked lists",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Solve problems like Balanced Parentheses, Sliding Window Maximum",
+          "duration_minutes": 150
+        }
+      ]
+    },
+    {
+      "title": "7. Trees and Binary Search Trees",
+      "description": "Learn tree structures, traversals, and basic tree algorithms.",
+      "duration_days": 4,
+      "resources": [
+        "https://www.geeksforgeeks.org/binary-tree-data-structure/",
+        "https://www.programiz.com/dsa/binary-search-tree",
+        "https://visualgo.net/en/bst"
+      ],
+      "tasks": [
+        {
+          "task": "Implement binary tree and BST",
+          "duration_minutes": 150
+        },
+        {
+          "task": "Practice Inorder, Preorder, Postorder traversal (recursive + iterative)",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Solve tree problems on LeetCode (level-order traversal, path sum)",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "8. Heaps and Priority Queues",
+      "description": "Understand heap structure and how it supports efficient priority operations.",
+      "duration_days": 2,
+      "resources": [
+        "https://www.geeksforgeeks.org/heap-data-structure/",
+        "https://visualgo.net/en/heap"
+      ],
+      "tasks": [
+        {
+          "task": "Implement Min Heap and Max Heap",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Use heaps to solve top-K problems (like Top K frequent elements)",
+          "duration_minutes": 90
+        }
+      ]
+    },
+    {
+      "title": "9. Hashing and Hash Maps",
+      "description": "Master key-value data structures for efficient lookup.",
+      "duration_days": 2,
+      "resources": [
+        "https://www.geeksforgeeks.org/hashing-data-structure/",
+        "https://leetcode.com/tag/hash-table/"
+      ],
+      "tasks": [
+        {
+          "task": "Implement a hash table (open addressing or chaining)",
+          "duration_minutes": 90
+        },
+        {
+          "task": "Solve problems like Two Sum, Group Anagrams",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "10. Graphs and Graph Algorithms",
+      "description": "Learn how to represent and traverse graphs using BFS, DFS, and shortest path algorithms.",
+      "duration_days": 4,
+      "resources": [
+        "https://www.geeksforgeeks.org/graph-data-structure-and-algorithms/",
+        "https://visualgo.net/en/graphds",
+        "https://leetcode.com/tag/graph/"
+      ],
+      "tasks": [
+        {
+          "task": "Implement BFS and DFS traversal",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Implement Dijkstra’s and Bellman-Ford algorithms",
+          "duration_minutes": 150
+        },
+        {
+          "task": "Solve 3 medium graph problems on LeetCode",
+          "duration_minutes": 120
+        }
+      ]
+    },
+    {
+      "title": "11. Dynamic Programming (DP)",
+      "description": "Break complex problems into overlapping subproblems using recursion + memoization or tabulation.",
+      "duration_days": 5,
+      "resources": [
+        "https://www.geeksforgeeks.org/dynamic-programming/",
+        "https://leetcode.com/tag/dynamic-programming/",
+        "https://www.youtube.com/watch?v=oBt53YbR9Kk"
+      ],
+      "tasks": [
+        {
+          "task": "Solve Fibonacci, 0/1 Knapsack, Longest Common Subsequence",
+          "duration_minutes": 180
+        },
+        {
+          "task": "Practice top-down and bottom-up DP approaches",
+          "duration_minutes": 120
+        },
+        {
+          "task": "Solve 5 medium LeetCode DP problems",
+          "duration_minutes": 180
+        }
+      ]
+    },
+    {
+      "title": "12. Final Practice & Mock Interviews",
+      "description": "Consolidate everything with problem-solving and system design exercises.",
+      "duration_days": 5,
+      "resources": [
+        "https://leetcode.com/explore/",
+        "https://www.hackerrank.com/domains/tutorials/10-days-of-recursion",
+        "https://interviewing.io/"
+      ],
+      "tasks": [
+        {
+          "task": "Solve 10 mixed-level DSA problems on LeetCode",
+          "duration_minutes": 240
+        },
+        {
+          "task": "Attempt 2 mock interviews with friends or using a platform",
+          "duration_minutes": 180
+        },
+        {
+          "task": "Create a GitHub repo documenting all your solutions and patterns",
+          "duration_minutes": 120
+        }
+      ]
+    }
+  ]
+}
