@@ -1,16 +1,15 @@
 import json
 import re
-from datetime import datetime
 from models.roadmap_model import Roadmap, Topic, Task
 from core.database import db, r
-from core.exceptions import RoadmapError, TopicNotFoundError, TaskNotFoundError, InvalidRoadmapError, RoadmapNotFoundError
+from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
 
 
 def generate_id(title: str) -> str:
     # Generate ID from title: lowercase, replace spaces with hyphens, remove special chars
     title = re.sub(r'[^\w\s-]', '', title.lower())
-    title = re.sub(r'[\s]+', '-', title)
+    title = re.sub(r'\s+', '-', title)
     
     # # Add timestamp to avoid collisions with duplicate titles
     # timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
@@ -80,9 +79,9 @@ async def get_all_roadmaps() -> list[Roadmap]:
     # Fetch all roadmap
     try:
         # return roadmaps
-        ids_list = await get_all_roadmaps_ids()
+        id_list = await get_all_roadmaps_ids()
         roadmaps = []
-        for id in ids_list:
+        for id in id_list:
             cached_roadmap = r.get(id)
             if cached_roadmap:
                 roadmap_dict = json.loads(cached_roadmap)
@@ -109,7 +108,6 @@ async def get_all_roadmaps() -> list[Roadmap]:
 #         Dict containing roadmaps, next_cursor and has_more flag
 #     """
 #     try:
-#         # Start with basic query
 #         query = db.collection("roadmaps").order_by("title")
         
 #         # Apply pagination
@@ -124,7 +122,6 @@ async def get_all_roadmaps() -> list[Roadmap]:
 #             # Start after the last document
 #             query = query.start_after(last_doc)
             
-#         # Apply limit to query
 #         query = query.limit(limit + 1)  # Get one extra to check if there are more
         
 #         # Execute query
@@ -137,7 +134,7 @@ async def get_all_roadmaps() -> list[Roadmap]:
             
 #         # Set the next cursor (if there are more results)
 #         next_cursor = docs[-1].id if has_more and docs else None
-            
+#
 #         roadmaps = []
         
 #         if fetch_details:
@@ -471,14 +468,14 @@ async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
 
 # async def delete_task(roadmap_id: str, topic_id: str, task_id: str) -> dict:
     # Delete a specific task in a topic of a roadmap
-    try:
-        # Perform the deletion in a thread-safe way
-        await asyncio.to_thread(
-            lambda: db.collection("roadmaps").document(roadmap_id)
-            .collection("topics").document(topic_id)
-            .collection("tasks").document(task_id).delete()
-        )
-        return {"message": "Task deleted successfully"}
-
-    except TaskNotFoundError as e:
-        raise TaskNotFoundError(f"Task {task_id} not found: {str(e)}")
+    # try:
+    #     # Perform the deletion in a thread-safe way
+    #     await asyncio.to_thread(
+    #         lambda: db.collection("roadmaps").document(roadmap_id)
+    #         .collection("topics").document(topic_id)
+    #         .collection("tasks").document(task_id).delete()
+    #     )
+    #     return {"message": "Task deleted successfully"}
+    #
+    # except TaskNotFoundError as e:
+    #     raise TaskNotFoundError(f"Task {task_id} not found: {str(e)}")
