@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, Query
-from core.exceptions import InvalidRoadmapError, InvalidTaskError, InvalidTopicError, RoadmapNotFoundError, TaskNotFoundError, TopicNotFoundError
-from models.roadmap_model import Roadmap, Topic, Task
-from services.roadmaps.roadmap_services import (
+from fastapi import APIRouter, HTTPException
+from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
+from models.roadmap_model import Roadmap
+from services.roadmap_services import (
     create_roadmap,
     get_all_roadmaps,
     get_all_roadmaps_ids,
@@ -178,13 +178,13 @@ async def update_roadmap_endpoint(roadmap_id: str, roadmap: Roadmap):
 
 # @router.delete("/{roadmap_id}/{topic_id}/{task_id}", response_model=dict)
 # async def delete_task_endpoint(roadmap_id: str, topic_id: str, task_id: str):
-    try:
-        return await delete_task(roadmap_id, topic_id, task_id)
-    except RoadmapNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except TopicNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except TaskNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+#     try:
+#         return await delete_task(roadmap_id, topic_id, task_id)
+#     except RoadmapNotFoundError as e:
+#         raise HTTPException(status_code=404, detail=str(e))
+#     except TopicNotFoundError as e:
+#         raise HTTPException(status_code=404, detail=str(e))
+#     except TaskNotFoundError as e:
+#         raise HTTPException(status_code=404, detail=str(e))
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
