@@ -18,7 +18,7 @@ RUN chmod 600 /root/.ssh/id_rsa && \
     ssh-keyscan github.com >> /root/.ssh/known_hosts
 
 # Install Python dependencies
-COPY app/ .
+COPY . .
 
 RUN git clone git@github.com:Mennatalla-Khougha/roadmap-tasks.git
 
@@ -28,7 +28,7 @@ RUN cd roadmap-tasks/
 
 WORKDIR /app/roadmap-tasks
 
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Command to run the application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--reload"]
