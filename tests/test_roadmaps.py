@@ -1,7 +1,7 @@
 import json
 import pytest
 from unittest.mock import AsyncMock, patch
-from services.roadmaps.roadmap_services import create_roadmap, generate_id
+from services.roadmap_services import create_roadmap, generate_id
 from models.roadmap_model import Roadmap, Topic, Task
 
 
