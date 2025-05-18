@@ -2,12 +2,13 @@ from fastapi import FastAPI
 from core.database import db, r
 from google.cloud import firestore
 
-from routers import roadmaps
+from routers import roadmaps, users
 
 app = FastAPI()
 
 # router routes
 app.include_router(roadmaps.router, prefix="/roadmaps", tags=["roadmaps"])
+app.include_router(users.router, prefix="/users", tags=["users"])
 
 @app.get("/")
 def read_root():
