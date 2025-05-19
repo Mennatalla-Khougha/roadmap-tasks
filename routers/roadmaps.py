@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
 from models.roadmap_model import Roadmap
 from services.roadmap_services import (
@@ -8,13 +8,17 @@ from services.roadmap_services import (
     get_roadmap,
     update_roadmap,
     delete_roadmap,
-    delete_all_roadmaps
+    delete_all_roadmaps,
+    get_roadmaps_paginated
 )
 
 router = APIRouter()
 
 @router.post("/", response_model=dict)
 async def create_roadmap_endpoint(roadmap: Roadmap):
+    """
+    Endpoint to create a new roadmap.
+    """
     try:
         return await create_roadmap(roadmap)
     except InvalidRoadmapError as e:
@@ -25,6 +29,9 @@ async def create_roadmap_endpoint(roadmap: Roadmap):
 
 @router.get("/ids", response_model=list[str])
 async def get_all_roadmaps_id_endpoint():
+    """
+    Endpoint to get all roadmap IDs.
+    """
     try:
         return await get_all_roadmaps_ids()
     except RoadmapNotFoundError as e:
@@ -35,6 +42,9 @@ async def get_all_roadmaps_id_endpoint():
 
 @router.get("/", response_model=list[Roadmap])
 async def get_all_roadmaps_endpoint():
+    """
+    Endpoint to get all roadmaps.
+    """
     try:
         return await get_all_roadmaps()
     except RoadmapNotFoundError as e:
@@ -45,22 +55,28 @@ async def get_all_roadmaps_endpoint():
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
     
 
-# @router.get("/roadmaps")
-# async def get_roadmaps(
-#     limit: int = Query(1, ge=1, le=10),
-#     cursor: str = Query(None)
-# ):
-#     result = await get_roadmaps_paginated(limit=limit, last_doc_id=cursor)
-#     return {
-#         "roadmaps": result["roadmaps"],
-#         "pagination": {
-#             "next_cursor": result["next_cursor"],
-#             "has_more": result["has_more"]
-#         }
-#     }
+@router.get("/roadmaps-paginated", response_model=dict)
+async def get_roadmaps(
+    limit: int = Query(1, ge=1, le=10),
+    cursor: str = Query(None)
+):
+    """
+    Endpoint to get paginated roadmaps.
+    """
+    result = await get_roadmaps_paginated(limit=limit, last_doc_id=cursor)
+    return {
+        "roadmaps": result["roadmaps"],
+        "pagination": {
+            "next_cursor": result["next_cursor"],
+            "has_more": result["has_more"]
+        }
+    }
 
 @router.get("/{roadmap_id}", response_model=Roadmap)
 async def get_roadmap_endpoint(roadmap_id: str):
+    """
+    Endpoint to get a specific roadmap by ID.
+    """
     try:
         return await get_roadmap(roadmap_id)
     except RoadmapNotFoundError as e:
@@ -73,6 +89,9 @@ async def get_roadmap_endpoint(roadmap_id: str):
 
 @router.delete("/{roadmap_id}", response_model=dict)
 async def delete_roadmap_endpoint(roadmap_id: str):
+    """
+    Endpoint to delete a specific roadmap by ID.
+    """
     try:
         return await delete_roadmap(roadmap_id)
     except RoadmapNotFoundError as e:
@@ -83,6 +102,9 @@ async def delete_roadmap_endpoint(roadmap_id: str):
 
 @router.delete("/", response_model=dict)
 async def delete_all_roadmaps_endpoint():
+    """
+    Endpoint to delete all roadmaps.
+    """
     try:
         return await delete_all_roadmaps()
     except RoadmapNotFoundError as e:
@@ -93,6 +115,9 @@ async def delete_all_roadmaps_endpoint():
 
 @router.put("/{roadmap_id}", response_model=dict)
 async def update_roadmap_endpoint(roadmap_id: str, roadmap: Roadmap):
+    """
+    Endpoint to update a specific roadmap by ID.
+    """
     try:
         return await update_roadmap(roadmap_id, roadmap)
     except RoadmapNotFoundError as e:
@@ -102,89 +127,3 @@ async def update_roadmap_endpoint(roadmap_id: str, roadmap: Roadmap):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
-
-# @router.get("/{roadmap_id}/topics", response_model=list[Topic])
-# async def get_all_roadmap_topics_endpoint(roadmap_id: str):
-#     try:
-#         return await get_all_roadmap_topics(roadmap_id)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except InvalidTopicError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-
-
-
-# @router.get("/{roadmap_id}/topics/{topic_id}/tasks", response_model=list[Task])
-# async def get_all_roadmap_topic_tasks_endpoint(roadmap_id: str, topic_id: str):
-#     try:
-#         return await get_all_roadmap_topic_tasks(roadmap_id, topic_id)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TaskNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except InvalidTaskError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
-
-# @router.put("/{roadmap_id}/{topic_id}", response_model=dict)
-# async def update_topic_endpoint(roadmap_id: str, topic_id: str, topic: Topic):
-#     try:
-#         return await update_topic(roadmap_id, topic_id, topic)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except InvalidTopicError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
-
-# @router.put("/{roadmap_id}/{topic_id}/{task_id}", response_model=dict)
-# async def update_task_endpoint(roadmap_id: str, topic_id: str, task_id: str, task: Task):
-#     try:
-#         return await update_task(roadmap_id, topic_id, task_id, task)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TaskNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except InvalidTaskError as e:
-#         raise HTTPException(status_code=400, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
-
-# @router.delete("/{roadmap_id}/{topic_id}", response_model=dict)
-# async def delete_topic_endpoint(roadmap_id: str, topic_id: str):
-#     try:
-#         return await delete_topic(roadmap_id, topic_id)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
-
-# @router.delete("/{roadmap_id}/{topic_id}/{task_id}", response_model=dict)
-# async def delete_task_endpoint(roadmap_id: str, topic_id: str, task_id: str):
-#     try:
-#         return await delete_task(roadmap_id, topic_id, task_id)
-#     except RoadmapNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TopicNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except TaskNotFoundError as e:
-#         raise HTTPException(status_code=404, detail=str(e))
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
