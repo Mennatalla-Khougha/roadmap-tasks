@@ -1,6 +1,5 @@
-from fastapi import  APIRouter, HTTPException
-from pydantic import EmailStr
-
+from fastapi import APIRouter, HTTPException, Depends
+from core.security import get_current_user
 from models.user_model import UserCreate, UserResponse, UserLogin
 from services.user_services import create_user, get_user, user_login
 
@@ -19,8 +18,8 @@ def create_user_endpoint(user: UserCreate):
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
-@router.get("/users/{email}", response_model=UserResponse)
-def get_user_endpoint(email: EmailStr):
+@router.get("/user", response_model=UserResponse)
+def get_user_endpoint(email: str = Depends(get_current_user)):
     """
     Endpoint to get a user by email.
     """

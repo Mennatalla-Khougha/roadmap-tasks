@@ -1,8 +1,8 @@
 from datetime import datetime
-from pydantic import EmailStr
 from core.security import hash_password, verify_password, create_access_token
 from models.user_model import UserCreate, UserResponse, UserLogin
 from core.database import db
+
 
 def create_user(user: UserCreate) -> UserResponse:
     """
@@ -33,7 +33,7 @@ def create_user(user: UserCreate) -> UserResponse:
         raise ValueError(f"Error creating user: {e}")
 
 
-def get_user(email: EmailStr) -> UserResponse:
+def get_user(email:str) -> UserResponse:
     """
     Get a user by email from the database.
     """
