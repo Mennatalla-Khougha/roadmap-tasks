@@ -1,11 +1,14 @@
+from datetime import datetime
+
 from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
-    id: str
+    id: str = None
     username: str
     email: EmailStr
     password: str
+    created_at: datetime = None
     is_active: bool = False
 
 
@@ -19,5 +22,10 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
 
+    class Config:
+        from_attributes = True
 
