@@ -126,4 +126,3 @@ async def update_roadmap_endpoint(roadmap_id: str, roadmap: Roadmap):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-
