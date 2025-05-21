@@ -2,7 +2,7 @@ import os
 from typing import Annotated
 
 from dotenv import load_dotenv
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from jose import jwt, JWTError
@@ -49,6 +49,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
         payload = jwt.decode(token, secrete_key, algorithms=[algorithm])
         return payload.get("id")
     except ExpiredSignatureError:
-        raise ValueError("Token has expired")
+        raise HTTPException(status_code=401, detail="Session Expired")
     except JWTError:
-        raise ValueError("Invalid token")
+        raise HTTPException(status_code=401, detail="Invalid token")
+
