@@ -1,5 +1,5 @@
 from core.exceptions import RoadmapNotFoundError
-from models.tasky_model import Topic, Task
+from models.roadmap_model import Topic, Task
 from services.roadmap_services import get_roadmap
 
 
@@ -55,6 +55,35 @@ async def get_all_tasks(roadmap_id: str, topic_id: str) -> list[Task]:
         topic = await get_topic(roadmap_id, topic_id)
         tasks = topic.tasks
         return [task for task in tasks]
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+    except Exception as e:
+        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+
+
+async def get_all_tasks_ids(roadmap_id: str, topic_id: str) -> list[str]:
+    """
+    Get all task IDs from a specific topic in a roadmap.
+    """
+    try:
+        tasks = await get_all_tasks(roadmap_id, topic_id)
+        return [task.id for task in tasks]
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+    except Exception as e:
+        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+
+
+async def get_task(roadmap_id: str, topic_id: str, task_id: str) -> Task:
+    """
+    Get a specific task from a topic in a roadmap.
+    """
+    try:
+        tasks = await get_all_tasks(roadmap_id, topic_id)
+        for task in tasks:
+            if task.id == task_id:
+                return task
+        raise RoadmapNotFoundError(f"Task with id {task_id} not found in topic {topic_id} of roadmap {roadmap_id}.")
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
