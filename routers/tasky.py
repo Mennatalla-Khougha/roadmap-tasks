@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from core.exceptions import RoadmapNotFoundError
-from models.tasky_model import Topic, Task
+from models.roadmap_model import Topic, Task
 
 from services.tasky_services import get_all_topics, get_topic, get_all_topics_ids, get_all_tasks
 
@@ -51,5 +51,32 @@ async def get_all_tasks_endpoint(roadmap_id: str, topic_id: str):
     """
     try:
         return await get_all_tasks(roadmap_id, topic_id)
+    except RoadmapNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{topic_id}/tasks/ids", response_model=list[str])
+async def get_all_tasks_ids_endpoint(roadmap_id: str, topic_id: str):
+    """
+    Get all task IDs from a specific topic in the roadmap.
+    """
+    try:
+        tasks = await get_all_tasks(roadmap_id, topic_id)
+        return [task.id for task in tasks]
+    except RoadmapNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{topic_id}/tasks/{task_id}", response_model=Task)
+async def get_task_endpoint(roadmap_id: str, topic_id: str, task_id: str):
+    """
+    Get a specific task from a topic in the roadmap.
+    """
+    try:
+        tasks = await get_all_tasks(roadmap_id, topic_id)
+        for task in tasks:
+            if task.id == task_id:
+                return task
+        raise RoadmapNotFoundError(f"Task with id {task_id} not found in topic {topic_id}.")
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
