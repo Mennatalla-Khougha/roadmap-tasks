@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException
-from core.exceptions import RoadmapNotFoundError
+from core.exceptions import RoadmapNotFoundError, TopicNotFoundError, InvalidTopicError
 from models.roadmap_model import Topic, Task
 
 from services.tasky_services import get_all_topics, get_topic, get_all_topics_ids, get_all_tasks
 
 router = APIRouter()
+
+# Fix: Exception handling
 
 
 @router.get("/", response_model=dict)
@@ -18,6 +20,10 @@ async def get_all_topics_endpoint(roadmap_id: str):
         return {"topics": topics}
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except TopicNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/ids", response_model=list[str])
@@ -30,6 +36,10 @@ async def get_all_topics_ids_endpoint(roadmap_id: str):
         return await get_all_topics_ids(roadmap_id)
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except TopicNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/{topic_id}", response_model= Topic)
@@ -40,8 +50,12 @@ async def get_topic_endpoint(roadmap_id: str, topic_id: str):
     try:
         # Assuming you have a function to get a specific topic from a roadmap
         return await get_topic(roadmap_id, topic_id)
-    except RoadmapNotFoundError as e:
+    except TopicNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except InvalidTopicError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/{topic_id}/tasks", response_model=list[Task])
