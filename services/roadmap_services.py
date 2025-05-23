@@ -5,6 +5,7 @@ from core.database import db, r
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
 
+# Fix: Update Function for updating topics and tasks
 
 def generate_id(title: str) -> str:
     """
@@ -47,7 +48,8 @@ async def create_roadmap(roadmap: Roadmap) -> dict:
                 task_ref = topic_ref.collection("tasks").document(task_id)
                 task_data = task.model_dump()
                 task_data["id"] = task_id
-                task_data["description"] = task_data.get("description", "")  # Default to empty string
+                task_data["description"] = task_data.get("description", "")
+                task_data["topic_id"] = topic_id
                 batch.set(task_ref, task_data)
 
         await asyncio.to_thread(batch.commit)
@@ -275,9 +277,11 @@ async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
                 "title": topic.title,
                 "description": topic.description,
                 "duration_days": topic.duration_days,
-                "resources": topic.resources
+                "resources": topic.resources,
+                "id": topic_id
             }, merge=True)
             task_ref = topic_doc_ref.collection("tasks")
+            print(topic_id)
 
             async def update_task(task: Task):
                 """
@@ -286,6 +290,8 @@ async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
                 task_id = task.id if task.id else generate_id(task.task)
                 task_doc_ref = task_ref.document(task_id)
                 await asyncio.to_thread(task_doc_ref.set, task.model_dump(), True)
+                task_doc_ref.update({"topic_id": topic_id})
+                print(task_id)
             # Update all tasks concurrently
             await asyncio.gather(*[update_task(task) for task in topic.tasks])
 
