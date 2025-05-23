@@ -1,6 +1,10 @@
-from core.exceptions import RoadmapNotFoundError
+from core.exceptions import RoadmapNotFoundError, TopicNotFoundError, InvalidTopicError, TaskNotFoundError, \
+    InvalidTaskError
 from models.roadmap_model import Topic, Task
 from services.roadmap_services import get_roadmap
+
+
+# FIX: Exception handling
 
 
 async def get_all_topics(roadmap_id: str) -> list[Topic]:
@@ -16,7 +20,7 @@ async def get_all_topics(roadmap_id: str) -> list[Topic]:
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise TopicNotFoundError(f"Unexpected Error: {str(e)}") from e
 
 
 async def get_all_topics_ids(roadmap_id: str) -> list[str]:
@@ -29,7 +33,8 @@ async def get_all_topics_ids(roadmap_id: str) -> list[str]:
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise TopicNotFoundError(f"Unexpected Error: {str(e)}") from e
+
 
 async def get_topic(roadmap_id: str, topic_id: str) -> Topic:
     """
@@ -40,11 +45,11 @@ async def get_topic(roadmap_id: str, topic_id: str) -> Topic:
         for topic in topics:
             if topic.id == topic_id:
                 return topic
-        raise RoadmapNotFoundError(f"Topic with id {topic_id} not found in roadmap {roadmap_id}.")
-    except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+        raise TopicNotFoundError(f"Topic with id {topic_id} not found in roadmap {roadmap_id}.")
+    except TopicNotFoundError as e:
+        raise TopicNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise InvalidTopicError(f"Unexpected Error: {str(e)}") from e
 
 
 async def get_all_tasks(roadmap_id: str, topic_id: str) -> list[Task]:
@@ -55,10 +60,10 @@ async def get_all_tasks(roadmap_id: str, topic_id: str) -> list[Task]:
         topic = await get_topic(roadmap_id, topic_id)
         tasks = topic.tasks
         return [task for task in tasks]
-    except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+    except TaskNotFoundError as e:
+        raise TaskNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise InvalidTaskError(f"Unexpected Error: {str(e)}") from e
 
 
 async def get_all_tasks_ids(roadmap_id: str, topic_id: str) -> list[str]:
@@ -68,10 +73,10 @@ async def get_all_tasks_ids(roadmap_id: str, topic_id: str) -> list[str]:
     try:
         tasks = await get_all_tasks(roadmap_id, topic_id)
         return [task.id for task in tasks]
-    except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+    except TaskNotFoundError as e:
+        raise TaskNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise InvalidTaskError(f"Unexpected Error: {str(e)}") from e
 
 
 async def get_task(roadmap_id: str, topic_id: str, task_id: str) -> Task:
@@ -83,8 +88,11 @@ async def get_task(roadmap_id: str, topic_id: str, task_id: str) -> Task:
         for task in tasks:
             if task.id == task_id:
                 return task
-        raise RoadmapNotFoundError(f"Task with id {task_id} not found in topic {topic_id} of roadmap {roadmap_id}.")
-    except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
+        raise TaskNotFoundError(f"Task with id {task_id} not found in topic {topic_id} of roadmap {roadmap_id}.")
+    except TaskNotFoundError as e:
+        raise TaskNotFoundError(f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise RoadmapNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise InvalidTaskError(f"Unexpected Error: {str(e)}") from e
+
+
+
