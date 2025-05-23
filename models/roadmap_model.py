@@ -15,6 +15,7 @@ class Task(BaseModel):
     duration_minutes: int | None = None
     resources: list[str] = []
     status: Status = Status.NOT_STARTED
+    topic_id: str | None = None
 
 class Topic(BaseModel):
     id: str | None = None
