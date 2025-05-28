@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from core.exceptions import RoadmapNotFoundError, TopicNotFoundError, InvalidTopicError
-from models.roadmap_model import Topic, Task
+from schemas.roadmap_model import Topic, Task
 
 from services.tasky_services import get_all_topics, get_topic, get_all_topics_ids, get_all_tasks
 

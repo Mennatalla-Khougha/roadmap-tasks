@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query
 from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
-from models.roadmap_model import Roadmap
+from schemas.roadmap_model import Roadmap
 from services.roadmap_services import (
     create_roadmap,
     get_all_roadmaps,
