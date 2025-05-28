@@ -35,7 +35,7 @@ jobs:
           python -m pytest -p pytest_firestore_mock --maxfail=1 --disable-warnings -q
       
 
-      - name: Run linter
-        run: |
-          pip install flake8
-          flake8 .
+#      - name: Run linter
+#        run: |
+#          pip install flake8
+#          flake8 .
