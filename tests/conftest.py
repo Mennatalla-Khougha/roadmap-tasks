@@ -1,20 +1,15 @@
 import pytest
 from unittest.mock import MagicMock
 
-# Create mock objects
-mock_firestore = MagicMock()
-mock_redis = MagicMock()
 
-# Patch at module level before any imports
-pytest.mock.patch("google.cloud.firestore.Client", return_value=mock_firestore).start()
-pytest.mock.patch("redis.Redis", return_value=mock_redis).start()
-pytest.mock.patch("core.database.db", mock_firestore).start()
-pytest.mock.patch("core.database.r", mock_redis).start()
+@pytest.fixture(autouse=True, scope="session")
+def mock_database_connections():
+    # Create mock objects
+    mock_firestore = MagicMock()
+    mock_redis = MagicMock()
 
-@pytest.fixture(scope="session")
-def mock_db():
-    return mock_firestore
-
-@pytest.fixture(scope="session")
-def mock_redis():
-    return mock_redis
+    with pytest.MonkeyPatch.context() as mp:
+        # Patch the getter functions
+        mp.setattr("core.database.get_db", lambda: mock_firestore)
+        mp.setattr("core.database.get_redis", lambda: mock_redis)
+        yield
