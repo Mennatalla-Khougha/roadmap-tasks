@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          pytest -p tests.pytest_firestore_mock --maxfail=1 --disable-warnings -q
+          python -m pytest -p pytest_firestore_mock --maxfail=1 --disable-warnings -q
 
       - name: Run linter
         run: |
