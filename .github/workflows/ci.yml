@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          python -c "import test_setup" 
+          python -c "import patch_modules" 
           python -m pytest --maxfail=1 --disable-warnings -q
 
       - name: Run linter
