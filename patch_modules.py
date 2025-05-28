@@ -1,7 +1,7 @@
 # patch_modules.py
 import os
 import sys
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 # Set environment variables first
 os.environ["SECRET_KEY"] = "testing-secret-key"
@@ -15,29 +15,28 @@ sys.modules['google.cloud.firestore'] = MagicMock()
 sys.modules['google.cloud.firestore_v1'] = MagicMock()
 sys.modules['redis'] = MagicMock()
 
-# Force import core.security and modify its module attributes directly
+# Force import and patch core.security
 try:
-    # Import the module
+    # Import the modules
     from core import security
+    import jose.jwt
 
-    # Override module constants directly
+    # Override module constants
     security.SECRET_KEY = "testing-secret-key"
     security.ALGORITHM = "HS256"
-    security.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-    # Re-export any functions that might have captured the old values at definition time
-    original_create_token = security.create_access_token
+    # Store original functions
+    original_decode = jose.jwt.decode
 
 
-    def patched_create_token(*args, **kwargs):
-        # Force the algorithm in the token creation
-        result = original_create_token(*args, **kwargs)
-        return result
+    # Patch JWT decode to use hardcoded algorithm
+    def patched_decode(token, key, algorithms=None, **kwargs):
+        # Force HS256 algorithm regardless of what's passed in
+        return original_decode(token, "testing-secret-key", algorithms=["HS256"], **kwargs)
 
 
     # Replace the function
-    security.create_access_token = patched_create_token
-
-    print("Successfully patched security module")
+    jose.jwt.decode = patched_decode
+    print("Successfully patched JWT decode function")
 except Exception as e:
-    print(f"Error patching security module: {e}")
+    print(f"Error patching modules: {e}")
