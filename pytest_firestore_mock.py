@@ -51,23 +51,31 @@ def pytest_configure(config):
     try:
         import jose.jwt
 
-        # Check if already patched to prevent issues if pytest_configure is somehow called multiple times
-        # (though it typically runs once per session for a plugin)
         if not hasattr(jose.jwt, '_original_encode_by_firestore_mock'):
             jose.jwt._original_encode_by_firestore_mock = jose.jwt.encode
             jose.jwt._original_decode_by_firestore_mock = jose.jwt.decode
 
             def patched_encode_for_tests(claims, key=None, algorithm=None, **kwargs):
                 # Forcibly use the test key and algorithm for encoding
-                # print(f"Patched jose.jwt.encode called. Original key: {key}, alg: {algorithm}. Overriding with test values.")
                 return jose.jwt._original_encode_by_firestore_mock(claims, "testing-secret-key", algorithm="HS256",
                                                                    **kwargs)
 
             def patched_decode_for_tests(token, key=None, algorithms=None, **kwargs):
-                # Forcibly use the test key and algorithm for decoding
-                # print(f"Patched jose.jwt.decode called. Original key: {key}, algs: {algorithms}. Overriding with test values.")
-                return jose.jwt._original_decode_by_firestore_mock(token, "testing-secret-key", algorithms=["HS256"],
-                                                                   **kwargs)
+                # If key is None (likely from test_security.py's imported SECRET_KEY being None),
+                # use the test default "testing-secret-key".
+                # Otherwise, use the key provided by the test (e.g., for testing invalid keys).
+                effective_key = "testing-secret-key" if key is None else key
+
+                # If algorithms is None or [None] (likely from test_security.py's imported ALGORITHM being None),
+                # use the test default ["HS256"].
+                # Otherwise, use algorithms provided by the test.
+                effective_algorithms = ["HS256"] if (algorithms is None or algorithms == [None]) else algorithms
+
+                # Uncomment for debugging if needed:
+                # print(f"Patched jose.jwt.decode: original key='{key}', original algs='{algorithms}' -> effective key='{effective_key}', effective algs='{effective_algorithms}'")
+
+                return jose.jwt._original_decode_by_firestore_mock(token, effective_key,
+                                                                   algorithms=effective_algorithms, **kwargs)
 
             jose.jwt.encode = patched_encode_for_tests
             jose.jwt.decode = patched_decode_for_tests
