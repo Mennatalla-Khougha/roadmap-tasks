@@ -1,42 +1,41 @@
 # patch_modules.py
 import os
 import sys
-from unittest.mock import MagicMock, patch
+import importlib
+from unittest.mock import MagicMock
 
-# Set environment variables first
+# 1. Set env vars before any imports
 os.environ["SECRET_KEY"] = "testing-secret-key"
 os.environ["ALGORITHM"] = "HS256"
 os.environ["REDIS_HOST"] = "localhost"
 os.environ["REDIS_PORT"] = "6379"
 os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
 
-# Mock database modules
+# 2. Mock Firestore/Redis
 sys.modules['google.cloud.firestore'] = MagicMock()
 sys.modules['google.cloud.firestore_v1'] = MagicMock()
 sys.modules['redis'] = MagicMock()
 
-# Force import and patch core.security
-try:
-    # Import the modules
-    from core import security
-    import jose.jwt
+# 3. Import & reload core.security so it picks up new env vars
+import core.security
+importlib.reload(core.security)
+core.security.SECRET_KEY = "testing-secret-key"
+core.security.ALGORITHM = "HS256"
+core.security.ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-    # Override module constants
-    security.SECRET_KEY = "testing-secret-key"
-    security.ALGORITHM = "HS256"
+# 4. Patch jose.jwt.encode/decode
+import jose.jwt
 
-    # Store original functions
-    original_decode = jose.jwt.decode
+_original_encode = jose.jwt.encode
+_original_decode = jose.jwt.decode
 
+def patched_encode(claims, key=None, algorithm=None, **kwargs):
+    return _original_encode(claims, "testing-secret-key", algorithm="HS256", **kwargs)
 
-    # Patch JWT decode to use hardcoded algorithm
-    def patched_decode(token, key, algorithms=None, **kwargs):
-        # Force HS256 algorithm regardless of what's passed in
-        return original_decode(token, "testing-secret-key", algorithms=["HS256"], **kwargs)
+def patched_decode(token, key=None, algorithms=None, **kwargs):
+    return _original_decode(token, "testing-secret-key", algorithms=["HS256"], **kwargs)
 
+jose.jwt.encode = patched_encode
+jose.jwt.decode = patched_decode
 
-    # Replace the function
-    jose.jwt.decode = patched_decode
-    print("Successfully patched JWT decode function")
-except Exception as e:
-    print(f"Error patching modules: {e}")
+print("patch_modules applied: security reloaded; jwt.encode/decode patched")
