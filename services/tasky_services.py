@@ -1,6 +1,6 @@
 from core.exceptions import RoadmapNotFoundError, TopicNotFoundError, InvalidTopicError, TaskNotFoundError, \
     InvalidTaskError
-from models.roadmap_model import Topic, Task
+from schemas.roadmap_model import Topic, Task
 from services.roadmap_services import get_roadmap
 
 
