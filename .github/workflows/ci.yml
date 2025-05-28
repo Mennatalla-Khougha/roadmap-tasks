@@ -30,8 +30,10 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          python -c "import patch_modules" 
-          python -m pytest --maxfail=1 --disable-warnings -q
+          # The python -c "import patch_modules" line is removed.
+          # The -p pytest_firestore_mock flag ensures our plugin's pytest_configure hook runs.
+          python -m pytest -p pytest_firestore_mock --maxfail=1 --disable-warnings -q
+      
 
       - name: Run linter
         run: |
