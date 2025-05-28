@@ -4,9 +4,12 @@ import re
 from google.cloud import firestore
 
 from schemas.roadmap_model import Roadmap, Topic, Task
-from core.database import db, r
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
+from core.database import get_db, get_redis
+
+db = get_db()
+r = get_redis()
 
 # Fix: Update Function for updating topics and tasks
 

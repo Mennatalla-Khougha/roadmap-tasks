@@ -5,8 +5,10 @@ from google.cloud import firestore
 
 from core.security import hash_password, verify_password, create_access_token
 from schemas.user_model import UserCreate, UserResponse, UserLogin
-from core.database import db
 from services.roadmap_services import get_roadmap, write_roadmap
+from core.database import get_db
+
+db = get_db()
 
 
 def create_user(user: UserCreate) -> UserResponse:

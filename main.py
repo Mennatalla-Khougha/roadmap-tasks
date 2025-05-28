@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 
-from core.database import db, r
 from google.cloud import firestore
 
 from routers import roadmaps, users, tasky
+from core.database import get_db, get_redis
+
+db = get_db()
+r = get_redis()
 
 app = FastAPI()
 
