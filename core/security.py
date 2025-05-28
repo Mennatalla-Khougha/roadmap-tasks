@@ -11,16 +11,20 @@ from jose.exceptions import ExpiredSignatureError
 
 load_dotenv()
 
-secrete_key = os.getenv("JWT_SECRET_KEY")
-algorithm = os.getenv("JWT_ALGORITHM")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Create a password context with the default hashing algorithm
+# Create a password context with the default hashing ALGORITHM
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 def hash_password(password: str) -> str:
     """
-    Hash a password using the default hashing algorithm.
+    Hash a password using the default hashing ALGORITHM.
+    Args:
+        password (str): The plain text password to hash.
+    Returns:
+        str: The hashed password.
     """
     return pwd_context.hash(password)
 
@@ -28,25 +32,52 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against a hashed password.
+    Args:
+        plain_password (str): The plain text password to verify.
+        hashed_password (str): The hashed password to compare against.
+    Returns:
+        bool: True if the password matches, False otherwise.
     """
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict) -> str:
+def create_access_token(
+    subject: str,
+    user_id: str,
+) -> str:
     """
-    Create a JWT access token.
+    Create a JWT access token with a subject and user ID.
+    Args:
+        subject (str): The subject of the token, typically the user's email.
+        user_id (str): The unique identifier for the user.
+    Returns:
+        str: The encoded JWT token.
     """
-    expiration = datetime.now(timezone.utc) + timedelta(minutes=30)
-    token = jwt.encode({"exp": expiration, **data}, secrete_key, algorithm=algorithm)
-    return token
+    if subject is None or user_id is None:
+        raise TypeError("Subject and user_id must be provided")
+    now = datetime.now(timezone.utc)
+    expires_delta = timedelta(minutes=30)
+    expire = now + expires_delta
+    to_encode = {
+        "sub": subject,
+        "id": user_id,
+        "iat": now,
+        "exp": expire
+    }
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
 
 
 def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
     """
     Get the current user from the JWT token.
+    Args:
+        token (str): The JWT token from the request.
+    Returns:
+        str: The user ID extracted from the token.
     """
     try:
-        payload = jwt.decode(token, secrete_key, algorithms=[algorithm])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload.get("id")
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Session Expired")
