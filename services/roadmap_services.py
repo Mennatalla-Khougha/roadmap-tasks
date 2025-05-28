@@ -1,6 +1,9 @@
 import json
 import re
-from models.roadmap_model import Roadmap, Topic, Task
+
+from google.cloud import firestore
+
+from schemas.roadmap_model import Roadmap, Topic, Task
 from core.database import db, r
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
@@ -18,21 +21,32 @@ def generate_id(title: str) -> str:
     return title
 
 
-async def create_roadmap(roadmap: Roadmap) -> dict:
+async def write_roadmap(
+        parent: firestore.CollectionReference,
+        roadmap: Roadmap,
+        batch : firestore.WriteBatch,
+        roadmap_id: str = None,
+        ) -> str:
     """
-    Create a new roadmap in Firestore.
+    Write a roadmap to Firestore.
     Args:
-        roadmap: Roadmap object to be created
+        parent: Firestore collection reference where the roadmap will be stored
+        roadmap: Roadmap object to be written
+        batch: Firestore write batch for atomic operations
+        roadmap_id: Optional ID for the roadmap, if not provided, it will be generated
     Returns:
-        A dictionary containing the roadmap ID and title
+        The ID of the written roadmap
+    Raises:
+        InvalidRoadmapError: If the provided roadmap object is invalid
     """
     try:
-        roadmap_id = roadmap.id if roadmap.id else generate_id(roadmap.title)
-        batch = db.batch()
+        if not isinstance(roadmap, Roadmap):
+            raise InvalidRoadmapError("Invalid roadmap object provided")
+        roadmap_id = roadmap_id if roadmap_id else generate_id(roadmap.title)
         roadmap_data = roadmap.model_dump(exclude={"topics"})
         roadmap_data["id"] = roadmap_id
         roadmap_data["description"] = roadmap_data.get("description", "")
-        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
+        roadmap_ref = parent.document(roadmap_id)
         batch.set(roadmap_ref, roadmap_data)
 
         for topic in roadmap.topics:
@@ -52,6 +66,23 @@ async def create_roadmap(roadmap: Roadmap) -> dict:
                 task_data["topic_id"] = topic_id
                 batch.set(task_ref, task_data)
 
+        return roadmap_id
+    except InvalidRoadmapError as e:
+        raise InvalidRoadmapError(f"Invalid data: {str(e)}")
+
+
+async def create_roadmap(roadmap: Roadmap) -> dict:
+    """
+    Create a new roadmap in Firestore.
+    Args:
+        roadmap: Roadmap object to be created
+    Returns:
+        A dictionary containing the roadmap ID and title
+    """
+    try:
+        batch = db.batch()
+        parent = db.collection("roadmaps")
+        roadmap_id = await write_roadmap(parent, roadmap, batch)
         await asyncio.to_thread(batch.commit)
         return {"roadmap_id": roadmap_id, "roadmap_title": roadmap.title}
     except InvalidRoadmapError as e:
