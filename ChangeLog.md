@@ -59,22 +59,7 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
   - `/user` endpoint is protected and requires valid JWT.
 - **Error handling**: All endpoints return clear HTTP status codes and messages for errors.
 
-### 7. Testing
-
-- **Comprehensive test suite**:
-  - `tests/test_user_services.py`: Unit tests for user registration, login, error cases.
-  - `tests/test_user_routes.py`: Integration tests for endpoints, including protected route access.
-  - `tests/test_security.py`: Tests for password hashing/verification and JWT creation/validation.
-- **Test coverage** includes both positive and negative cases (e.g., duplicate registration, invalid login).
-- **Pytest and pytest-asyncio** used for running tests.
-- **Test warnings addressed**: Guidance provided for updating pytest and Pydantic v2 config usage.
-
-### 8. Continuous Integration
-
-- **GitHub Actions workflow** (`.github/workflows/ci.yml`) runs tests on every push/PR.
-- Ensures code quality and catches regressions early, even for solo development.
-
-### 9. Roadmap CRUD API & Service Layer
+### 7. Roadmap CRUD API & Service Layer
 
 - **CRUD endpoints for roadmaps** (`/roadmaps`) implemented, following RESTful conventions and best practices.
 - **Service layer** (`services/roadmap_services.py`) encapsulates Firestore and Redis logic, using async/await for concurrency.
@@ -83,6 +68,35 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 - **Pagination** and filtering supported for roadmap listing.
 - **Redis caching** integrated for roadmap retrieval, with cache invalidation on update/delete.
 - **Custom exceptions** defined for domain-specific error handling and mapped to appropriate HTTP status codes in routes.
+
+### 8. Testing
+
+- **Comprehensive test suite**:
+  - `tests/test_user_services.py`: Unit tests for user registration, login, error cases.
+  - `tests/test_user_routes.py`: Integration tests for endpoints, including protected route access.
+  - `tests/test_security.py`: Tests for password hashing/verification and JWT creation/validation.
+  - `tests/test_roadmap_routes.py`: Integration tests for roadmap CRUD endpoints, including positive and negative cases, error handling, and status code validation.
+- **Test coverage** includes both positive and negative cases (e.g., duplicate registration, invalid login, not found, invalid input).
+- **Pytest and pytest-asyncio** used for running tests.
+- **Test warnings addressed**: Guidance provided for updating pytest and Pydantic v2 config usage.
+
+### 9. Continuous Integration
+
+- **GitHub Actions workflow** (`.github/workflows/ci.yml`) runs tests on every push/PR.
+- Ensures code quality and catches regressions early, even for solo development.
+
+---
+
+## What Has NOT Been Done
+
+### 1. Dependency Injection for DB and Redis
+
+- **Current status:**  
+  - Database and Redis clients are still accessed via global variables and helper functions in `core/database.py`.
+  - Dependency injection via FastAPI's `Depends` system has **not** yet been implemented for db and Redis.
+- **Impact:**  
+  - Testability is good due to service mocking in tests, but could be improved further with DI for easier mocking and swapping in tests or different environments.
+  - Refactoring to DI is recommended for future-proofing and best practice.
 
 ---
 
@@ -130,6 +144,7 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 - **Testing**: Catches bugs early, ensures code quality, and builds confidence in the system.
 - **CI/CD**: Automates quality checks and prepares the project for future deployment and collaboration.
 - **Batch writes**: Boost performance, simplify testing, and keep code modular and scalable.
+- **Dependency Injection** (pending): Will further improve modularity, testability, and flexibility.
 
 ---
 
@@ -142,8 +157,9 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 | User Auth & Security    | ✅ Complete | JWT, bcrypt, robust error handling                |
 | User Services           | ✅ Complete | Registration, login, retrieval                    |
 | User Routes             | ✅ Complete | Endpoints, error handling, protection             |
+| Roadmap CRUD            | ✅ Complete | RESTful, batch writes, caching                    |
 | Testing                 | ✅ Complete | Unit, integration, security, CI                   |
-| Roadmap CRUD            | ✅ Complete | RESTful, batch writes, caching, DI                |
+| Dependency Injection    | 🚧 Pending  | Refactor db/redis to use FastAPI Depends          |
 | To-Do CRUD              | 🚧 Pending  | Next milestone                                    |
 | Redis Integration       | 🚧 Ongoing  | Expand caching, test invalidation                 |
 | Performance/Load        | 🚧 Pending  | Load testing, optimize concurrency                |
@@ -156,9 +172,12 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 
 1. **Finish CRUD for user to-dos and tasks.**
 2. **Expand and test Redis caching logic.**
-3. **Add and run load tests for concurrency.**
-4. **Document all endpoints and usage.**
-5. **(Optional) Add roles, rate limiting, and advanced auth.**
-6. **Prepare for frontend integration and deployment.**
+3. **Refactor db/redis access to use FastAPI dependency injection.**
+4. **Add and run load tests for concurrency.**
+5. **Document all endpoints and usage.**
+6. **(Optional) Add roles, rate limiting, and advanced auth.**
+7. **Prepare for frontend integration and deployment.**
 
 ---
+
+**This changelog provides a comprehensive record of all architectural, security, and testing decisions, and a clear roadmap for what’s next. Any developer or AI can pick up the project from here and continue with full context.**
