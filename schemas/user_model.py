@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
 from schemas.roadmap_model import Roadmap
 
@@ -16,6 +16,8 @@ class UserCreate(BaseModel):
     user_roadmaps_ids: list[str] = Field(default_factory=list)
     user_roadmaps: list[Roadmap] = Field(default_factory=list)
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserResponse(BaseModel):
     id: str
@@ -27,11 +29,11 @@ class UserResponse(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-    class Config:
-        from_attributes = True
-
+    model_config = ConfigDict(from_attributes=True)
