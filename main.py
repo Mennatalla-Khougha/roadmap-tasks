@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from google.cloud import firestore
+from fastapi.middleware.cors import CORSMiddleware
 
 from routers import roadmaps, users, tasky
 from core.database import get_db, get_redis
@@ -9,6 +10,23 @@ db = get_db()
 r = get_redis()
 
 app = FastAPI()
+
+origins = [
+    "http://localhost",         # For local development (any port)
+    "http://localhost:3000",    # Example for React/Vue/Angular dev server
+    "http://127.0.0.1",         # For local development (any port)
+    "http://127.0.0.1:3000",    # Example
+    # Add the origin of your Swagger UI or frontend application if it's different
+    # e.g., "http://your-frontend-domain.com"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # List of allowed origins
+    allow_credentials=True, # Allow cookies to be included in cross-origin requests
+    allow_methods=["*"],    # Allow all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],    # Allow all headers
+)
 
 # router routes
 app.include_router(roadmaps.router, prefix="/roadmaps", tags=["roadmaps"])
