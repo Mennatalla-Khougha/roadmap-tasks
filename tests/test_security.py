@@ -10,8 +10,9 @@ from core.security import create_access_token, hash_password, pwd_context, verif
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+# Corrected environment variable names
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+ALGORITHM = os.getenv("JWT_ALGORITHM")
 
 @pytest.fixture
 def setup_test_environment(monkeypatch):
