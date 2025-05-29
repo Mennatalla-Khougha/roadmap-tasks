@@ -1,6 +1,7 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+
 
 class Status(str, Enum):
     NOT_STARTED = "not started"
@@ -17,6 +18,8 @@ class Task(BaseModel):
     status: Status = Status.NOT_STARTED
     topic_id: str | None = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 class Topic(BaseModel):
     id: str | None = None
     title: str
@@ -25,9 +28,13 @@ class Topic(BaseModel):
     resources: list[str] = Field(default_factory=list)
     tasks: list[Task] = Field(default_factory=list)
 
+    model_config = ConfigDict(from_attributes=True)
+
 class Roadmap(BaseModel):
     id: str | None = None
     title: str
     description: str | None = None
     total_duration_weeks: int | None = None
     topics: list[Topic] = Field(default_factory=list)
+
+    model_config = ConfigDict(from_attributes=True)
