@@ -96,7 +96,7 @@ async def test_write_roadmap():
             )
         ]
     )
-    batch = MagicMock(spec=WriteBatch)
+    batch = MagicMock()  # Corrected line: provide a generic mock for the batch parameter
 
     # Mock document references
     roadmap_ref = MagicMock()
