@@ -74,28 +74,37 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 - **GitHub Actions workflow** (`.github/workflows/ci.yml`) runs tests on every push/PR.
 - Ensures code quality and catches regressions early, even for solo development.
 
+### 9. Roadmap CRUD API & Service Layer
+
+- **CRUD endpoints for roadmaps** (`/roadmaps`) implemented, following RESTful conventions and best practices.
+- **Service layer** (`services/roadmap_services.py`) encapsulates Firestore and Redis logic, using async/await for concurrency.
+- **Batch writes** used for atomic multi-document operations, with awareness of Firestore's 500-operation batch limit.
+- **ID generation** for roadmaps uses a slugified, collision-resistant approach.
+- **Pagination** and filtering supported for roadmap listing.
+- **Redis caching** integrated for roadmap retrieval, with cache invalidation on update/delete.
+- **Custom exceptions** defined for domain-specific error handling and mapped to appropriate HTTP status codes in routes.
+
 ---
 
 ## What Still Needs to Be Done
 
-### 1. Roadmap and To-Do CRUD APIs
+### 1. To-Do CRUD APIs
 
-- **Implement CRUD endpoints** for roadmaps (`/roadmaps`) and topics/tasks.
-- **Design Firestore schemas** for roadmaps, topics, and tasks.
-- **Implement user to-do list logic**:
-  - Allow users to add a roadmap to their to-do list.
-  - Support marking tasks as completed, removing tasks, and CRUD on user-specific to-dos.
-- **Test all roadmap and to-do endpoints** for correctness and security.
+- **Implement CRUD endpoints** for user-specific to-do lists and tasks.
+- **Design Firestore schemas** for to-dos, ensuring efficient queries and updates.
+- **Support user actions**: add roadmap to to-do, mark tasks complete, remove tasks, and update tasks.
+- **Test all to-do endpoints** for correctness, security, and edge cases.
 
-### 2. Redis Integration
+### 2. Redis Integration (Advanced)
 
-- **Integrate Redis** for caching frequent queries (e.g., roadmap lists) or as a job/task queue if needed.
+- **Expand Redis caching** to cover paginated roadmap lists and user to-dos.
+- **Make cache TTL configurable** and ensure cache invalidation logic is robust for all update/delete operations.
 - **Write tests** to ensure cache is used and invalidated correctly.
 
 ### 3. Performance & Concurrency
 
 - **Load testing**: Use tools like Locust or autocannon to ensure the API handles 100+ concurrent requests.
-- **Optimize FastAPI and Redis connection settings** for high concurrency.
+- **Optimize FastAPI and Redis connection settings** for high concurrency and low latency.
 
 ### 4. Documentation
 
@@ -120,6 +129,7 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 - **Authentication & security**: Protects user data and ensures only authorized access.
 - **Testing**: Catches bugs early, ensures code quality, and builds confidence in the system.
 - **CI/CD**: Automates quality checks and prepares the project for future deployment and collaboration.
+- **Batch writes**: Boost performance, simplify testing, and keep code modular and scalable.
 
 ---
 
@@ -133,9 +143,10 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 | User Services           | ✅ Complete | Registration, login, retrieval                    |
 | User Routes             | ✅ Complete | Endpoints, error handling, protection             |
 | Testing                 | ✅ Complete | Unit, integration, security, CI                   |
-| Roadmap/To-Do CRUD      | 🚧 Pending  | Next milestone                                    |
-| Redis Integration       | 🚧 Pending  | Next milestone                                    |
-| Performance/Load        | 🚧 Pending  | Next milestone                                    |
+| Roadmap CRUD            | ✅ Complete | RESTful, batch writes, caching, DI                |
+| To-Do CRUD              | 🚧 Pending  | Next milestone                                    |
+| Redis Integration       | 🚧 Ongoing  | Expand caching, test invalidation                 |
+| Performance/Load        | 🚧 Pending  | Load testing, optimize concurrency                |
 | Documentation           | 🚧 Pending  | Expand README, endpoint docs                      |
 | Advanced Features       | 🚧 Optional | Roles, rate limiting, email verification, CORS    |
 
@@ -143,9 +154,9 @@ Build a robust, scalable backend API using FastAPI, Firestore, and Redis to mana
 
 ## How to Continue
 
-1. **Finish CRUD for roadmaps and to-dos.**
-2. **Integrate Redis and add caching logic.**
-3. **Add and run load tests.**
+1. **Finish CRUD for user to-dos and tasks.**
+2. **Expand and test Redis caching logic.**
+3. **Add and run load tests for concurrency.**
 4. **Document all endpoints and usage.**
 5. **(Optional) Add roles, rate limiting, and advanced auth.**
 6. **Prepare for frontend integration and deployment.**
