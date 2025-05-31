@@ -142,7 +142,7 @@ async def add_roadmap_to_user(email: str, roadmap_id: str) -> UserResponse:
             "user_roadmaps_ids": firestore.ArrayUnion([roadmap_id]),
             "updated_at": datetime.now(),
         })
-        await asyncio.to_thread(batch.commit())
+        await asyncio.to_thread(batch.commit)
         return get_user(email)
     except ValueError as e:
         raise ValueError(f"Error adding roadmap to user: {e}")
