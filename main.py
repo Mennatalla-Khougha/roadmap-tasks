@@ -12,26 +12,25 @@ r = get_redis()
 app = FastAPI()
 
 origins = [
-    "http://localhost",         # For local development (any port)
-    "http://localhost:3000",    # Example for React/Vue/Angular dev server
-    "http://127.0.0.1",         # For local development (any port)
-    "http://127.0.0.1:3000",    # Example
-    # Add the origin of your Swagger UI or frontend application if it's different
-    # e.g., "http://your-frontend-domain.com"
+    "http://localhost",
+    "http://localhost:3000",
+    "http://127.0.0.1",
+    "http://127.0.0.1:3000",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # List of allowed origins
-    allow_credentials=True, # Allow cookies to be included in cross-origin requests
-    allow_methods=["*"],    # Allow all methods (GET, POST, PUT, DELETE, etc.)
-    allow_headers=["*"],    # Allow all headers
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # router routes
 app.include_router(roadmaps.router, prefix="/roadmaps", tags=["roadmaps"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(tasky.router, prefix="/topics", tags=["topics"])
+
 
 @app.get("/")
 def read_root():
@@ -47,16 +46,19 @@ async def read_firestore():
 
     fixed_doc = db.collection('test').document('connection_check')
     fixed_id = fixed_doc.id
-    fixed_doc.set({"status": "connected", "timestamp": firestore.SERVER_TIMESTAMP})
+    fixed_doc.set({
+            "status": "connected",
+            "timestamp": firestore.SERVER_TIMESTAMP
+        })
 
     # Retrieve documents and process them to make them serializable
     docs = db.collection("test").stream()
     doc_list = []
     for doc in docs:
-        doc_list.append(doc.to_dict())  # convert Firestore doc snapshot to a dict
+        doc_list.append(doc.to_dict())
 
     return {
-        "firestore_status": doc_list,  # Now it's a list of dictionaries that can be serialized
+        "firestore_status": doc_list,
         "generated_id": generated_id,
         "fixed_id": fixed_id
     }
