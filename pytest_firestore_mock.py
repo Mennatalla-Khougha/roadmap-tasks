@@ -3,49 +3,42 @@ from unittest.mock import MagicMock
 import os
 import sys
 import importlib
+import core.security
 
-
-# These module-level mocks can be used if fixtures need to return consistent instances.
-# However, for sys.modules patching, new MagicMock() instances are often created directly.
-# global_mock_firestore = MagicMock()
-# global_mock_redis = MagicMock()
 
 def pytest_configure(config):
-    print("pytest_firestore_mock: pytest_configure hook started.")
-
     # 1. Set environment variables
     os.environ["SECRET_KEY"] = "testing-secret-key"
     os.environ["ALGORITHM"] = "HS256"
     os.environ["REDIS_HOST"] = "localhost"
     os.environ["REDIS_PORT"] = "6379"
     os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
-    print(
-        f"pytest_firestore_mock: Environment variables set. SECRET_KEY='{os.getenv('SECRET_KEY')}', ALGORITHM='{os.getenv('ALGORITHM')}'")
 
     # 2. Mock external modules in sys.modules
     sys.modules['google.cloud.firestore'] = MagicMock()
     sys.modules['google.cloud.firestore_v1'] = MagicMock()
     sys.modules['redis'] = MagicMock()
-    print("pytest_firestore_mock: External modules (firestore, redis) mocked in sys.modules.")
 
     # 3. Import, reload, and patch core.security
     try:
-        import core.security
-        importlib.reload(core.security)  # Reload to ensure it picks up env vars if imported early
-        print("pytest_firestore_mock: core.security imported and reloaded.")
+        importlib.reload(core.security)
 
         # Explicitly set attributes on the core.security module
         core.security.SECRET_KEY = os.getenv("SECRET_KEY")
         core.security.ALGORITHM = os.getenv("ALGORITHM")
-        # Ensure ACCESS_TOKEN_EXPIRE_MINUTES is an int if your code expects that
-        core.security.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-        print(
-            f"pytest_firestore_mock: core.security attributes forcibly set. SECRET_KEY='{core.security.SECRET_KEY}', ALGORITHM='{core.security.ALGORITHM}'")
+        core.security.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv(
+            "ACCESS_TOKEN_EXPIRE_MINUTES", "30"
+        ))
     except ImportError:
         print(
-            "pytest_firestore_mock: core.security module not found. Assuming it will pick up env vars on its first import.")
+            "pytest_firestore_mock: "
+            "core.security module not found. "
+            "Assuming it will pick up env vars on its first import."
+        )
     except Exception as e:
-        print(f"pytest_firestore_mock: Error during core.security handling: {e}")
+        print(
+            f"pytest_firestore_mock: Error during core.security handling: {e}"
+        )
 
     # 4. Monkeypatch jose.jwt.encode and jose.jwt.decode
     try:
@@ -55,37 +48,42 @@ def pytest_configure(config):
             jose.jwt._original_encode_by_firestore_mock = jose.jwt.encode
             jose.jwt._original_decode_by_firestore_mock = jose.jwt.decode
 
-            def patched_encode_for_tests(claims, key=None, algorithm=None, **kwargs):
+            def patched_encode_for_tests(claims, **kwargs):
                 # Forcibly use the test key and algorithm for encoding
-                return jose.jwt._original_encode_by_firestore_mock(claims, "testing-secret-key", algorithm="HS256",
-                                                                   **kwargs)
+                return jose.jwt._original_encode_by_firestore_mock(
+                    claims, "testing-secret-key", algorithm="HS256", **kwargs
+                )
 
-            def patched_decode_for_tests(token, key=None, algorithms=None, **kwargs):
-                # If key is None (likely from test_security.py's imported SECRET_KEY being None),
-                # use the test default "testing-secret-key".
-                # Otherwise, use the key provided by the test (e.g., for testing invalid keys).
+            def patched_decode_for_tests(
+                    token, key=None, algorithms=None, **kwargs
+            ):
                 effective_key = "testing-secret-key" if key is None else key
+                effective_algorithms = ["HS256"] if (
+                        algorithms is None or algorithms == [None]
+                ) else algorithms
 
-                # If algorithms is None or [None] (likely from test_security.py's imported ALGORITHM being None),
-                # use the test default ["HS256"].
-                # Otherwise, use algorithms provided by the test.
-                effective_algorithms = ["HS256"] if (algorithms is None or algorithms == [None]) else algorithms
-
-                # Uncomment for debugging if needed:
-                # print(f"Patched jose.jwt.decode: original key='{key}', original algs='{algorithms}' -> effective key='{effective_key}', effective algs='{effective_algorithms}'")
-
-                return jose.jwt._original_decode_by_firestore_mock(token, effective_key,
-                                                                   algorithms=effective_algorithms, **kwargs)
+                return jose.jwt._original_decode_by_firestore_mock(
+                    token, effective_key,
+                    algorithms=effective_algorithms, **kwargs
+                )
 
             jose.jwt.encode = patched_encode_for_tests
             jose.jwt.decode = patched_decode_for_tests
-            print("pytest_firestore_mock: jose.jwt.encode and jose.jwt.decode have been monkeypatched.")
+            print(
+                "pytest_firestore_mock:"
+                " jose.jwt.encode and jose.jwt.decode have been monkeypatched."
+            )
         else:
             print(
-                "pytest_firestore_mock: jose.jwt.encode and jose.jwt.decode appear to be already patched by this plugin.")
+                "pytest_firestore_mock: "
+                "jose.jwt.encode and jose."
+                "jwt.decode appear to be already patched by this plugin."
+            )
 
     except ImportError:
-        print("pytest_firestore_mock: jose.jwt module not found. Cannot patch.")
+        print(
+            "pytest_firestore_mock: jose.jwt module not found. Cannot patch."
+        )
     except Exception as e:
         print(f"pytest_firestore_mock: Error during jose.jwt patching: {e}")
 
