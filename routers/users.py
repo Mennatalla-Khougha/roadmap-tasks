@@ -67,7 +67,7 @@ def login_user_endpoint(user: UserLogin):
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
-@router.put("/add_roadmaps", response_model=UserResponse)
+@router.post("/roadmaps", response_model=UserResponse)
 async def add_roadmaps_to_user_endpoint(email: str, roadmap_id: str):
     """
     Endpoint to add a roadmap to a user.
