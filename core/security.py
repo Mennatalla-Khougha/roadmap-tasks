@@ -3,7 +3,7 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
@@ -14,7 +14,9 @@ load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = HTTPBearer()
+
 
 # Create a password context with the default hashing ALGORITHM
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -77,10 +79,16 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
         str: The user ID extracted from the token.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("id")
+        if token is None or token.scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return user_id
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Session Expired")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
 
