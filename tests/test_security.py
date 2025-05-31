@@ -6,6 +6,9 @@ from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from jose.exceptions import ExpiredSignatureError
+from fastapi import HTTPException
+from fastapi.security.http import HTTPAuthorizationCredentials
+
 from core.security import create_access_token, hash_password, pwd_context, verify_password, get_current_user
 
 load_dotenv()
@@ -99,7 +102,7 @@ def test_handle_empty_plain_password():
 
 def test_reject_empty_hashed_password():
     plain_password = "securepassword123"
-    with pytest.raises(Exception):
+    with pytest.raises(Exception): # passlib raises ValueError for empty hash
         verify_password(plain_password, "")
 
 def test_handle_special_characters_in_plain_password():
@@ -112,14 +115,13 @@ def test_handle_long_plain_password():
     hashed_password = hash_password(plain_password)
     assert verify_password(plain_password, hashed_password)
 
-import pytest
-from fastapi import HTTPException
 
 def test_retrieves_user_id_from_valid_token(setup_test_environment):
     subject = "test@example.com"
     user_id = "12345"
-    token = create_access_token(subject, user_id)
-    assert get_current_user(token) == user_id
+    token_str = create_access_token(subject, user_id)
+    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    assert get_current_user(auth_creds) == user_id
 
 def test_raises_error_for_expired_token(setup_test_environment):
     subject = "test@example.com"
@@ -132,16 +134,18 @@ def test_raises_error_for_expired_token(setup_test_environment):
         "iat": now,
         "exp": expired_time
     }
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    token_str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
     with pytest.raises(HTTPException) as exc_info:
-        get_current_user(token)
+        get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Session Expired"
 
 def test_raises_error_for_invalid_token(setup_test_environment):
-    token = "invalid.token.value"
+    token_str = "invalid.token.value"
+    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
     with pytest.raises(HTTPException) as exc_info:
-        get_current_user(token)
+        get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Invalid token"
 
@@ -154,6 +158,11 @@ def test_handles_missing_user_id_in_token(setup_test_environment):
         "sub": subject,
         "iat": now,
         "exp": expire
+        # "id" is missing
     }
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    assert get_current_user(token) is None
+    token_str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    with pytest.raises(HTTPException) as exc_info:
+        get_current_user(auth_creds)
+    assert exc_info.value.status_code == 401
+    assert exc_info.value.detail == "Invalid token payload"
