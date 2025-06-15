@@ -25,3 +25,7 @@ class InvalidTopicError(RoadmapError):
 class InvalidTaskError(RoadmapError):
     """Raised when Task validation fails"""
     pass
+
+class UserNotFoundError(Exception):
+    """Raised when a user is not found"""
+    pass
