@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 from unittest.mock import MagicMock, ANY
 
+from core.exceptions import UserNotFoundError
 from schemas.user_model import UserCreate, UserLogin
 from services.user_services import create_user, get_user, user_login
 
@@ -123,7 +124,8 @@ def test_user_login_with_empty_password(mock_db):
     # Act & Assert
     with pytest.raises(ValueError) as exc_info:
         user_login(user_login_data)
-    assert "Error logging in: Email and password are required" in str(exc_info.value)
+    assert "Email and password are required" in str(exc_info.value)
+
 
 def test_get_user_raises_error_for_nonexistent_user(mock_db):
     # Arrange
@@ -131,9 +133,9 @@ def test_get_user_raises_error_for_nonexistent_user(mock_db):
     mock_db.collection.return_value.document.return_value.get.return_value.exists = False
 
     # Act & Assert
-    with pytest.raises(FileNotFoundError) as exc_info:
+    with pytest.raises(UserNotFoundError) as exc_info:  # Changed from FileNotFoundError
         get_user(email)
-    assert "User not found: No user exist with that Email" in str(exc_info.value)
+    assert "No user exist with that Email" in str(exc_info.value)
 
 
 def test_get_user_raises_error_on_database_failure(mock_db):
@@ -144,7 +146,7 @@ def test_get_user_raises_error_on_database_failure(mock_db):
     # Act & Assert
     with pytest.raises(ValueError) as exc_info:
         get_user(email)
-    assert "Error retrieving user: Database connection failed" in str(exc_info.value)
+    assert "Unexpected Error: Database connection failed" in str(exc_info.value)
 
 
 def test_user_login_with_valid_credentials(mock_db, mock_verify_password, mock_create_access_token):
@@ -172,25 +174,20 @@ def test_user_login_with_valid_credentials(mock_db, mock_verify_password, mock_c
 
 
 def test_user_login_with_empty_credentials(mock_db, monkeypatch):
-    # Create a modified version of user_login that lets us test with empty credentials
-    # without triggering Pydantic validation
-
-    # This function will be used to patch the UserLogin validation
+    # Create login data with empty credentials
     class MockUserLogin:
         def __init__(self, email, password):
             self.email = email
             self.password = password
 
-    # Patch the UserLogin class
     monkeypatch.setattr('services.user_services.UserLogin', MockUserLogin)
-
-    # Create login data with empty credentials
     login_data = MockUserLogin(email="", password="")
 
     # Act & Assert
     with pytest.raises(ValueError) as exc_info:
         user_login(login_data)
-    assert "Error logging in: Email and password are required" in str(exc_info.value)
+    assert "Email and password are required" in str(exc_info.value)
+
 
 def test_user_login_with_nonexistent_email(mock_db):
     # Arrange
@@ -200,7 +197,7 @@ def test_user_login_with_nonexistent_email(mock_db):
     # Act & Assert
     with pytest.raises(ValueError) as exc_info:
         user_login(user_login_data)
-    assert "Error logging in: Invalid password or email" in str(exc_info.value)
+    assert "Invalid password or email" in str(exc_info.value)
 
 
 def test_user_login_with_incorrect_password(mock_db, mock_verify_password):
@@ -218,4 +215,4 @@ def test_user_login_with_incorrect_password(mock_db, mock_verify_password):
     # Act & Assert
     with pytest.raises(ValueError) as exc_info:
         user_login(user_login_data)
-    assert "Error logging in: Invalid password or email" in str(exc_info.value)
+    assert "Invalid password or email" in str(exc_info.value)
