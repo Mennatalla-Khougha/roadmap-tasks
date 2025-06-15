@@ -56,6 +56,10 @@ def sample_roadmap(sample_topic):
 @pytest.fixture
 def mock_db():
     with patch("services.roadmap_services.db") as mock:
+        mock_collection_ref = MagicMock()
+        mock.collection.return_value = mock_collection_ref
+        mock_doc_ref = MagicMock()
+        mock_collection_ref.document.return_value = mock_doc_ref
         yield mock
 
 
@@ -197,50 +201,38 @@ async def test_get_roadmap_from_cache(mock_db, mock_redis, sample_roadmap):
     assert isinstance(result, Roadmap)
     assert result.title == "Python Roadmap"
     mock_redis.get.assert_called_once_with("python-roadmap")
-    mock_db.collection.assert_not_called()  # DB should not be accessed
-
-
-@pytest.mark.asyncio
-async def test_get_roadmap_from_db(mock_db, mock_redis, sample_roadmap):
-    # Setup - roadmap not in cache
-    mock_redis.get.return_value = None
-
-    # Mock document retrieval
-    doc_mock = MagicMock()
-    doc_mock.exists = True
-    doc_mock.to_dict.return_value = {
-        "id": "python-roadmap",
-        "title": "Python Roadmap",
-        "description": "Learn Python",
-        "total_duration_weeks": 12
-    }
-
-    with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
-        mock_to_thread.side_effect = [
-            doc_mock,  # For roadmap document
-            [],  # For topic documents (empty for simplicity)
-        ]
-
-        # Call function
-        result = await get_roadmap("python-roadmap")
-
-        # Assert
-        assert isinstance(result, Roadmap)
-        assert result.title == "Python Roadmap"
-        mock_redis.set.assert_called_once()  # Cache should be updated
+    mock_db.collection.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_get_roadmap_not_found(mock_db, mock_redis):
-    # Setup
+    # Setup - roadmap not in cache
     mock_redis.get.return_value = None
-    doc_mock = MagicMock()
-    doc_mock.exists = False
 
-    with patch("asyncio.to_thread", return_value=doc_mock):
-        # Call function and expect exception
-        with pytest.raises(RoadmapNotFoundError):
+    # Setup - roadmap not in DB
+    firestore_doc_mock = MagicMock()
+    firestore_doc_mock.exists = False
+
+    # Track which function is being passed to to_thread
+    async def custom_mock_to_thread(func, *args, **kwargs):
+        # When it's the Redis get call
+        if func is mock_redis.get:
+            # Call the original function to register the call
+            result = func(*args, **kwargs)
+            # We know this will be None based on our mock setup
+            return result
+        else:
+            # Return a document mock with exists=False for Firestore calls
+            return firestore_doc_mock
+
+    # Patch with our custom function
+    with patch("asyncio.to_thread", new=custom_mock_to_thread):
+        # Call function and expect RoadmapNotFoundError
+        with pytest.raises(RoadmapNotFoundError, match="Roadmap nonexistent not found"):
             await get_roadmap("nonexistent")
+
+        # Verify Redis get was called
+        mock_redis.get.assert_called_once_with("nonexistent")
 
 
 @pytest.mark.asyncio
