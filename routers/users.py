@@ -1,7 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
+
+from core.exceptions import UserNotFoundError, RoadmapNotFoundError
 from core.security import get_current_user
+from schemas.roadmap_model import Roadmap
 from schemas.user_model import UserCreate, UserResponse, UserLogin
-from services.user_services import create_user, get_user, user_login, add_roadmap_to_user
+from services.user_services import create_user, get_user, user_login, add_roadmap_to_user, get_user_roadmap, \
+    get_user_roadmaps
 
 router = APIRouter()
 
@@ -40,8 +44,10 @@ def get_user_endpoint(email: str = Depends(get_current_user)):
     try:
         user = get_user(email)
         return user
-    except FileNotFoundError as e:
+    except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
@@ -82,7 +88,55 @@ async def add_roadmaps_to_user_endpoint(email: str, roadmap_id: str):
     """
     try:
         return await add_roadmap_to_user(email, roadmap_id)
-    except FileNotFoundError as e:
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+
+
+@router.get("/roadmaps", response_model=list[Roadmap])
+async def get_user_roadmaps_endpoint(email: str = Depends(get_current_user)):
+    """
+    Endpoint to get all roadmaps of a user.
+    This endpoint retrieves the list of roadmap IDs associated with the user.
+    Args:
+        email (str): The email of the user, obtained from the current user context.
+    Raises:
+        HTTPException: If no user exists with the provided email or if there is an error retrieving the roadmaps.
+    Returns:
+        list[str]: A list of roadmap IDs associated with the user.
+    """
+    try:
+        roadmaps = await get_user_roadmaps(email)
+        return roadmaps
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RoadmapNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+
+
+@router.get("/roadmap", response_model=Roadmap)
+async def get_user_roadmap_endpoint(roadmap_id: str, email: str = Depends(get_current_user)):
+    """
+    Endpoint to get all roadmaps of a user.
+    This endpoint retrieves the list of roadmap IDs associated with the user.
+    Args:
+        email (str): The email of the user, obtained from the current user context.
+        roadmap_id (str): The ID of the roadmap to retrieve.
+    Raises:
+        HTTPException: If no user exists with the provided email or if there is an error retrieving the roadmaps.
+    Returns:
+        list[str]: A list of roadmap IDs associated with the user.
+    """
+    try:
+        return await get_user_roadmap(roadmap_id, email)
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
