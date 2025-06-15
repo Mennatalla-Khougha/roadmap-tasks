@@ -1,5 +1,4 @@
 import json
-import re
 
 from google.cloud import firestore
 
@@ -7,71 +6,12 @@ from schemas.roadmap_model import Roadmap, Topic, Task
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
 from core.database import get_db, get_redis
+from utilis.roadmap_helper import write_roadmap, generate_id, fetch_roadmap_from_firestore
 
 db = get_db()
 r = get_redis()
 
 # Fix: Update Function for updating topics and tasks
-
-def generate_id(title: str) -> str:
-    """
-    Generate a unique ID for the roadmap based on its title.
-    This function converts the title to lowercase, replaces spaces with hyphens,
-    and removes special characters.
-    """
-    title = re.sub(r'[^\w\s-]', '', title.lower())
-    title = re.sub(r'\s+', '-', title)
-    return title
-
-
-async def write_roadmap(
-        parent: firestore.CollectionReference,
-        roadmap: Roadmap,
-        batch : firestore.WriteBatch,
-        roadmap_id: str = None,
-        ) -> str:
-    """
-    Write a roadmap to Firestore.
-    Args:
-        parent: Firestore collection reference where the roadmap will be stored
-        roadmap: Roadmap object to be written
-        batch: Firestore write batch for atomic operations
-        roadmap_id: Optional ID for the roadmap, if not provided, it will be generated
-    Returns:
-        The ID of the written roadmap
-    Raises:
-        InvalidRoadmapError: If the provided roadmap object is invalid
-    """
-    try:
-        if not isinstance(roadmap, Roadmap):
-            raise InvalidRoadmapError("Invalid roadmap object provided")
-        roadmap_id = roadmap_id if roadmap_id else generate_id(roadmap.title)
-        roadmap_data = roadmap.model_dump(exclude={"topics"})
-        roadmap_data["id"] = roadmap_id
-        roadmap_data["description"] = roadmap_data.get("description", "")
-        roadmap_ref = parent.document(roadmap_id)
-        batch.set(roadmap_ref, roadmap_data)
-
-        for topic in roadmap.topics:
-            topic_id = topic.id if topic.id else generate_id(topic.title)
-            topic_data = topic.model_dump(exclude={"tasks"})
-            topic_data["id"] = topic_id
-            topic_data["description"] = topic_data.get("description", "")
-            topic_ref = roadmap_ref.collection("topics").document(topic_id)
-            batch.set(topic_ref, topic_data)
-
-            for task in topic.tasks:
-                task_id = task.id if task.id else generate_id(task.task)
-                task_ref = topic_ref.collection("tasks").document(task_id)
-                task_data = task.model_dump()
-                task_data["id"] = task_id
-                task_data["description"] = task_data.get("description", "")
-                task_data["topic_id"] = topic_id
-                batch.set(task_ref, task_data)
-
-        return roadmap_id
-    except InvalidRoadmapError as e:
-        raise InvalidRoadmapError(f"Invalid data: {str(e)}")
 
 
 async def create_roadmap(roadmap: Roadmap) -> dict:
@@ -181,46 +121,16 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
     Fetch a specific roadmap by ID from Firestore.
     """
     try:
-        cached_roadmap = r.get(roadmap_id)
+        cached_roadmap = await asyncio.to_thread(r.get, roadmap_id)
         if cached_roadmap:
           roadmap_dict = json.loads(cached_roadmap)
           return Roadmap(**roadmap_dict)
 
-        doc = await asyncio.to_thread(
-            lambda: db.collection("roadmaps").document(roadmap_id).get()
-        )
-        if not doc.exists:
-            raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
-        roadmap_data = doc.to_dict()
-        roadmap_data.pop("id", None)
-        roadmap = Roadmap(id=roadmap_id, **roadmap_data)
-        topic_ref = db.collection("roadmaps").document(roadmap_id).collection("topics")
-        topic_docs = await asyncio.to_thread(lambda: list(topic_ref.stream()))
+        doc_ref = db.collection("roadmaps")
+        roadmap = await fetch_roadmap_from_firestore(doc_ref, roadmap_id)
 
-        async def fetch_topic_with_tasks(topic_doc) -> Topic:
-            """
-            Fetch a topic and its tasks concurrently.
-            """
-            topic_data = topic_doc.to_dict()
-            topic_id = topic_doc.id
-            topic_data.pop("id", None)
-
-            # Fetch tasks for this topic
-            task_ref = topic_ref.document(topic_id).collection("tasks")
-            task_docs = await asyncio.to_thread(lambda: list(task_ref.stream()))
-            tasks = [
-                Task(id=task_doc.id, **{k: v for k, v in task_doc.to_dict().items() if k != "id"})
-                for task_doc in task_docs
-            ]
-            return Topic(id=topic_id, tasks=tasks, **topic_data)
-
-        # Fetch all topics with tasks concurrently
-        topics: list[Topic] = await asyncio.gather(
-            *[fetch_topic_with_tasks(doc) for doc in topic_docs]
-        )
-        roadmap.topics = topics
         serialized_roadmap = json.dumps(roadmap.model_dump())
-        r.set(roadmap_id, serialized_roadmap, ex=15)
+        await asyncio.to_thread(r.set, roadmap_id, serialized_roadmap, ex=15)
         return roadmap
     except RoadmapNotFoundError:
         raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
