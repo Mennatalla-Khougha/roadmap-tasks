@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from datetime import datetime
 from unittest.mock import patch
 
+from core.exceptions import UserNotFoundError
 # Import app correctly
 from main import app
 from schemas.user_model import UserCreate, UserResponse, UserLogin
@@ -100,7 +101,7 @@ class TestUserRoutes:
     def test_get_user_endpoint_not_found(self, mock_get_user, mock_jwt_decode):
         # Setup mocks
         mock_jwt_decode.return_value = {"id": "test@example.com"}
-        mock_get_user.side_effect = FileNotFoundError("User not found")
+        mock_get_user.side_effect = UserNotFoundError("User not found")  # Changed from FileNotFoundError
 
         # Make request with authorization header
         response = client.get("/users/user", headers={"Authorization": "Bearer test-token"})
@@ -108,6 +109,7 @@ class TestUserRoutes:
         # Assert
         assert response.status_code == 404
         assert "User not found" in response.json()["detail"]
+
 
     @patch("core.security.jwt.decode")
     @patch("routers.users.get_user")
