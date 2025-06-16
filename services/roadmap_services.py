@@ -1,17 +1,12 @@
 import json
-
-from google.cloud import firestore
-
-from schemas.roadmap_model import Roadmap, Topic, Task
+from schemas.roadmap_model import Roadmap
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
 from core.database import get_db, get_redis
-from utilis.roadmap_helper import write_roadmap, generate_id, fetch_roadmap_from_firestore
+from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore
 
 db = get_db()
 r = get_redis()
-
-# Fix: Update Function for updating topics and tasks
 
 
 async def create_roadmap(roadmap: Roadmap) -> dict:
@@ -193,56 +188,3 @@ async def delete_all_roadmaps() -> dict:
         raise RoadmapError(f"Error deleting all roadmaps: {str(e)}")
     except Exception as e:
         raise Exception(f"Unexpected Error during deletion: {str(e)}")
-
-
-async def update_roadmap(roadmap_id: str, roadmap: Roadmap) -> dict:
-    """
-    Update a specific roadmap and its topics and tasks in Firestore.
-    """
-    try:
-        r.delete(roadmap_id)
-        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
-        # Update roadmap fields
-        await asyncio.to_thread(roadmap_ref.update, {
-            "title": roadmap.title,
-            "description": roadmap.description,
-            "total_duration_weeks": roadmap.total_duration_weeks,
-        })
-        topic_ref = roadmap_ref.collection("topics")
-
-        async def update_topic(topic: Topic):
-            """
-            Update a specific topic and its tasks in Firestore.
-            """
-            topic_id = topic.id if topic.id else generate_id(topic.title)
-            topic_doc_ref = topic_ref.document(topic_id)
-
-            await asyncio.to_thread(topic_doc_ref.set, {
-                "title": topic.title,
-                "description": topic.description,
-                "duration_days": topic.duration_days,
-                "resources": topic.resources,
-                "id": topic_id
-            }, merge=True)
-            task_ref = topic_doc_ref.collection("tasks")
-            print(topic_id)
-
-            async def update_task(task: Task):
-                """
-                Update a specific task in Firestore.
-                """
-                task_id = task.id if task.id else generate_id(task.task)
-                task_doc_ref = task_ref.document(task_id)
-                await asyncio.to_thread(task_doc_ref.set, task.model_dump(), True)
-                task_doc_ref.update({"topic_id": topic_id})
-                print(task_id)
-            # Update all tasks concurrently
-            await asyncio.gather(*[update_task(task) for task in topic.tasks])
-
-        # Update all topics concurrently
-        await asyncio.gather(*[update_topic(topic) for topic in roadmap.topics])
-        serialized_roadmap = json.dumps(roadmap.model_dump())
-        r.set(roadmap_id, serialized_roadmap, ex=15)
-        return {"message": "Roadmap updated successfully"}
-    except Exception as e:
-        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found or update failed: {str(e)}")
