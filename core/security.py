@@ -20,6 +20,8 @@ oauth2_scheme = HTTPBearer()
 
 # Create a password context with the default hashing ALGORITHM
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
 def hash_password(password: str) -> str:
     """
     Hash a password using the default hashing ALGORITHM.
@@ -81,14 +83,14 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
     try:
         if token is None or token.scheme.lower() != "bearer":
             raise HTTPException(status_code=401, detail="Not authenticated")
-        payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token.credentials, SECRET_KEY,
+                             algorithms=[ALGORITHM])
         user_id = payload.get("id")
         if user_id is None:
-            raise HTTPException(status_code=401, detail="Invalid token payload")
+            raise HTTPException(
+                status_code=401, detail="Invalid token payload")
         return user_id
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Session Expired")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
-
-
