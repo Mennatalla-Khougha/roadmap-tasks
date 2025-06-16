@@ -229,3 +229,52 @@ async def get_user_roadmap(roadmap_id: str, email: str) -> Roadmap:
         raise ValueError(f"Invalid input: {e}")
     except Exception as e:
         raise Exception(f"Unexpected Error: {e}")
+
+
+async def update_user_roadmap(roadmap_id: str, updated_fields: dict, email: str) -> str:
+    """
+    Update a specific roadmap for a user.
+    Args:
+        roadmap_id (str): The ID of the roadmap to be updated.
+        updated_fields (dict): A dictionary containing the fields to be updated in the roadmap.
+                               Only 'title', 'total_duration_weeks', and 'description' are allowed.
+        email (str): The email of the user whose roadmap is to be updated.
+    Raises:
+        UserNotFoundError: If the user does not exist.
+        RoadmapNotFoundError: If the roadmap does not exist for the user.
+        ValueError: If the roadmap ID or email is invalid, or if trying to update disallowed fields.
+        Exception: For any unexpected errors during the process.
+    Returns:
+        Roadmap: The updated roadmap object.
+    """
+    try:
+        user = get_user(email)
+        if not user:
+            raise UserNotFoundError("User not found")
+        if not roadmap_id:
+            raise ValueError("Roadmap ID is required")
+        if roadmap_id not in user.user_roadmaps_ids:
+            raise RoadmapNotFoundError("Roadmap not found in user's roadmaps")
+        allowed_update_fields = {"title", "total_duration_weeks", "description"}
+        fields_to_update = {
+            key: value for key, value in updated_fields.items() if key in allowed_update_fields
+        }
+        if not fields_to_update:
+            raise ValueError("No valid fields provided for update or all fields are disallowed.")
+        doc_ref = db.collection("users").document(email).collection("users_roadmaps").document(roadmap_id)
+        doc_snapshot = await asyncio.to_thread(doc_ref.get)
+        if not doc_snapshot.exists:
+            raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found for user {email}")
+        fields_to_update["updated_at"] = datetime.now()
+        await asyncio.to_thread(doc_ref.update, fields_to_update)
+
+        return "Roadmap updated successfully"
+
+    except UserNotFoundError as e:
+        raise UserNotFoundError(f"User not found: {e}")
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap not found: {e}")
+    except ValueError as e:
+        raise ValueError(f"Invalid input or operation: {e}")
+    except Exception as e:
+        raise Exception(f"Unexpected Error while updating user's roadmap: {str(e)}")
