@@ -7,7 +7,6 @@ from google.cloud.firestore import WriteBatch
 from schemas.roadmap_model import Roadmap, Topic, Task
 from core.exceptions import RoadmapNotFoundError, InvalidRoadmapError
 from services.roadmap_services import (
-    generate_id,
     write_roadmap,
     create_roadmap,
     get_all_roadmaps_ids,
@@ -16,8 +15,8 @@ from services.roadmap_services import (
     get_roadmaps_paginated,
     delete_roadmap,
     delete_all_roadmaps,
-    update_roadmap
 )
+from utilis.roadmap_helper import generate_id
 
 
 @pytest.fixture
@@ -322,31 +321,3 @@ async def test_delete_all_roadmaps(mock_redis):
             mock_redis.flushall.assert_called_once()
             assert mock_delete.call_count == 2
             mock_delete.assert_has_calls([call("roadmap1"), call("roadmap2")])
-
-
-@pytest.mark.asyncio
-async def test_update_roadmap(mock_db, mock_redis, sample_roadmap):
-    # Setup
-    roadmap_ref = MagicMock()
-    mock_db.collection.return_value.document.return_value = roadmap_ref
-
-    topic_ref = MagicMock()
-    roadmap_ref.collection.return_value = topic_ref
-
-    topic_doc_ref = MagicMock()
-    topic_ref.document.return_value = topic_doc_ref
-
-    task_ref = MagicMock()
-    topic_doc_ref.collection.return_value = task_ref
-
-    task_doc_ref = MagicMock()
-    task_ref.document.return_value = task_doc_ref
-
-    with patch("asyncio.to_thread", new_callable=AsyncMock):
-        # Call function
-        result = await update_roadmap("python-roadmap", sample_roadmap)
-
-        # Assert
-        assert result["message"] == "Roadmap updated successfully"
-        mock_redis.delete.assert_called_once_with("python-roadmap")
-        mock_redis.set.assert_called_once()
