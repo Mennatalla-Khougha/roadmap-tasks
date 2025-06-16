@@ -5,7 +5,7 @@ from core.security import get_current_user
 from schemas.roadmap_model import Roadmap
 from schemas.user_model import UserCreate, UserResponse, UserLogin
 from services.user_services import create_user, get_user, user_login, add_roadmap_to_user, get_user_roadmap, \
-    get_user_roadmaps
+    get_user_roadmaps, update_user_roadmap
 
 router = APIRouter()
 
@@ -119,7 +119,7 @@ async def get_user_roadmaps_endpoint(email: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
-@router.get("/roadmap", response_model=Roadmap)
+@router.get("/roadmap/{roadmap_id}", response_model=Roadmap)
 async def get_user_roadmap_endpoint(roadmap_id: str, email: str = Depends(get_current_user)):
     """
     Endpoint to get all roadmaps of a user.
@@ -134,6 +134,32 @@ async def get_user_roadmap_endpoint(roadmap_id: str, email: str = Depends(get_cu
     """
     try:
         return await get_user_roadmap(roadmap_id, email)
+    except UserNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RoadmapNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+
+@router.patch("/roadmap/{roadmap_id}", response_model=str)
+async def update_user_roadmap_endpoint(roadmap_id: str, updated_fields: dict, email: str = Depends(get_current_user)):
+    """
+    Endpoint to update a user's roadmap.
+    This endpoint allows updating specific fields of a user's roadmap.
+    Args:
+        roadmap_id (str): The ID of the roadmap to be updated.
+        updated_fields (dict): A dictionary containing the fields to be updated.
+                                Only 'title', 'total_duration_weeks', and 'description' are allowed.
+        email (str): The email of the user, obtained from the current user context.
+    Raises:
+        HTTPException: If the user or roadmap is not found, if the provided data is invalid, or if there is an unexpected error.
+    Returns:
+        str: A success message indicating the roadmap has been updated.
+    """
+    try:
+        return await update_user_roadmap(roadmap_id, updated_fields, email)
     except UserNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except RoadmapNotFoundError as e:
