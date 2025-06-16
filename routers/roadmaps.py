@@ -6,7 +6,6 @@ from services.roadmap_services import (
     get_all_roadmaps,
     get_all_roadmaps_ids,
     get_roadmap,
-    update_roadmap,
     delete_roadmap,
     delete_all_roadmaps,
     get_roadmaps_paginated
@@ -109,20 +108,5 @@ async def delete_all_roadmaps_endpoint():
         return await delete_all_roadmaps()
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-
-
-@router.put("/{roadmap_id}", response_model=dict)
-async def update_roadmap_endpoint(roadmap_id: str, roadmap: Roadmap):
-    """
-    Endpoint to update a specific roadmap by ID.
-    """
-    try:
-        return await update_roadmap(roadmap_id, roadmap)
-    except RoadmapNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except InvalidRoadmapError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
