@@ -225,5 +225,7 @@ async def get_user_roadmap(roadmap_id: str, email: str) -> Roadmap:
         raise UserNotFoundError(f"Error retrieving user's roadmaps: {e}")
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found for user {email}: {e}")
+    except ValueError as e:
+        raise ValueError(f"Invalid input: {e}")
     except Exception as e:
         raise Exception(f"Unexpected Error: {e}")
