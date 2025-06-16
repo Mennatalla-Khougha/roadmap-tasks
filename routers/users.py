@@ -138,5 +138,7 @@ async def get_user_roadmap_endpoint(roadmap_id: str, email: str = Depends(get_cu
         raise HTTPException(status_code=404, detail=str(e))
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
