@@ -54,7 +54,6 @@ def mock_services():
             patch("routers.roadmaps.get_all_roadmaps", new_callable=AsyncMock) as mock_get_all, \
             patch("routers.roadmaps.get_all_roadmaps_ids", new_callable=AsyncMock) as mock_get_ids, \
             patch("routers.roadmaps.get_roadmap", new_callable=AsyncMock) as mock_get, \
-            patch("routers.roadmaps.update_roadmap", new_callable=AsyncMock) as mock_update, \
             patch("routers.roadmaps.delete_roadmap", new_callable=AsyncMock) as mock_delete, \
             patch("routers.roadmaps.delete_all_roadmaps", new_callable=AsyncMock) as mock_delete_all, \
             patch("routers.roadmaps.get_roadmaps_paginated", new_callable=AsyncMock) as mock_paginated:
@@ -62,7 +61,6 @@ def mock_services():
         mock_get_all.return_value = mock_roadmap_list
         mock_get_ids.return_value = mock_roadmap_ids
         mock_get.return_value = mock_roadmap
-        mock_update.return_value = {"message": "Roadmap updated successfully"}
         mock_delete.return_value = {"message": "Roadmap and all related data deleted successfully"}
         mock_delete_all.return_value = {"message": "All roadmaps deleted successfully"}
         mock_paginated.return_value = mock_paginated_response
@@ -72,7 +70,6 @@ def mock_services():
             "get_all": mock_get_all,
             "get_ids": mock_get_ids,
             "get": mock_get,
-            "update": mock_update,
             "delete": mock_delete,
             "delete_all": mock_delete_all,
             "paginated": mock_paginated
@@ -204,30 +201,3 @@ class TestRoadmapRoutes:
 
         assert response.status_code == 404
         assert "No roadmaps found" in response.json()["detail"]
-
-    def test_update_roadmap_success(self, mock_services):
-        """Test successful update of a roadmap"""
-        response = client.put("/roadmaps/test-roadmap", json=mock_roadmap.model_dump())
-
-        assert response.status_code == 200
-        assert "message" in response.json()
-        assert "updated successfully" in response.json()["message"]
-        mock_services["update"].assert_called_once_with("test-roadmap", mock_roadmap)
-
-    def test_update_roadmap_not_found(self, mock_services):
-        """Test updating a roadmap that doesn't exist"""
-        mock_services["update"].side_effect = RoadmapNotFoundError("Roadmap not found")
-
-        response = client.put("/roadmaps/nonexistent", json=mock_roadmap.model_dump())
-
-        assert response.status_code == 404
-        assert "Roadmap not found" in response.json()["detail"]
-
-    def test_update_roadmap_invalid_data(self, mock_services):
-        """Test updating a roadmap with invalid data"""
-        mock_services["update"].side_effect = InvalidRoadmapError("Invalid roadmap data")
-
-        response = client.put("/roadmaps/test-roadmap", json=mock_roadmap.model_dump())
-
-        assert response.status_code == 400
-        assert "Invalid roadmap data" in response.json()["detail"]
