@@ -288,7 +288,7 @@ class TestUserRoutes:
         mock_jwt_decode.return_value = {"id": "test@example.com"}
         mock_get_roadmap.return_value = mock_roadmap_data
 
-        response = client.get("/users/roadmap?roadmap_id=roadmap123", headers={"Authorization": "Bearer test-token"})
+        response = client.get("/users/roadmap/roadmap123", headers={"Authorization": "Bearer test-token"})
 
         assert response.status_code == 200
         response_json = response.json()
@@ -301,7 +301,7 @@ class TestUserRoutes:
         mock_jwt_decode.return_value = {"id": "test@example.com"}
         mock_get_roadmap.side_effect = UserNotFoundError("User not found")
 
-        response = client.get("/users/roadmap?roadmap_id=roadmap123", headers={"Authorization": "Bearer test-token"})
+        response = client.get("/users/roadmap/roadmap123", headers={"Authorization": "Bearer test-token"})
 
         assert response.status_code == 404
         assert "User not found" in response.json()["detail"]
@@ -312,7 +312,7 @@ class TestUserRoutes:
         mock_jwt_decode.return_value = {"id": "test@example.com"}
         mock_get_roadmap.side_effect = RoadmapNotFoundError("Roadmap not found for user")
 
-        response = client.get("/users/roadmap?roadmap_id=roadmap123", headers={"Authorization": "Bearer test-token"})
+        response = client.get("/users/roadmap/roadmap123", headers={"Authorization": "Bearer test-token"})
 
         assert response.status_code == 404
         assert "Roadmap not found for user" in response.json()["detail"]
@@ -323,7 +323,7 @@ class TestUserRoutes:
         mock_jwt_decode.return_value = {"id": "test@example.com"}
         mock_get_roadmap.side_effect = Exception("Server is down")
 
-        response = client.get("/users/roadmap?roadmap_id=roadmap123", headers={"Authorization": "Bearer test-token"})
+        response = client.get("/users/roadmap/roadmap123", headers={"Authorization": "Bearer test-token"})
 
         assert response.status_code == 500
         assert "Unexpected Error" in response.json()["detail"]
