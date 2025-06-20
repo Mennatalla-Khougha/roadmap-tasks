@@ -5,6 +5,7 @@ from google.cloud import firestore
 
 from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError, TopicNotFoundError, TaskNotFoundError
 from schemas.roadmap_model import Roadmap, Task, Topic
+# from services.roadmap_services import delete_roadmap
 
 
 def generate_id(title: str) -> str:
@@ -153,3 +154,48 @@ async def fetch_roadmap_from_firestore(
         raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.")
     except Exception as e:
         raise Exception(f"Unexpected Error while fetching roadmap: {str(e)}")
+
+
+async def delete_roadmap_helper(
+    parent: firestore.CollectionReference,
+    roadmap_id: str
+) -> dict:
+    """
+    Helper function to delete a roadmap and its associated topics and tasks.
+    Args:
+        parent: Firestore collection reference where the roadmap is stored
+        roadmap_id: ID of the roadmap to be deleted
+    Raises:
+        RoadmapNotFoundError: If the roadmap does not exist
+        TopicNotFoundError: If a topic under the roadmap does not exist
+        TaskNotFoundError: If a task under a topic does not exist
+    Returns:
+        A success message indicating the roadmap has been deleted
+    """
+    try:
+        doc_ref = parent.document(roadmap_id)
+        doc = await asyncio.to_thread(doc_ref.get)
+        if not doc.exists:
+            raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
+        topic_docs = await asyncio.to_thread(lambda: list(doc_ref.collection("topics").stream()))
+        async def delete_topic_and_tasks(topic_doc: firestore.DocumentSnapshot):
+            """
+            Delete a topic and all its tasks concurrently.
+            """
+            topic_id = topic_doc.id
+            topic_ref = doc_ref.collection("topics").document(topic_id)
+
+            task_docs = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+            await asyncio.gather(*[
+                asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+                for task in task_docs
+            ])
+            await asyncio.to_thread(topic_ref.delete)
+
+        await asyncio.gather(*[delete_topic_and_tasks(topic) for topic in topic_docs])
+        await asyncio.to_thread(doc_ref.delete)
+        return {"message": "Roadmap and all related data deleted successfully"}
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found: {str(e)}")
+    except Exception as e:
+        raise Exception(f"Unexpected Error while deleting roadmap: {str(e)}")
