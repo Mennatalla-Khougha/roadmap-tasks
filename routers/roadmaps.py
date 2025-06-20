@@ -1,5 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends
+
 from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
+from core.security import get_current_admin_user
 from schemas.roadmap_model import Roadmap
 from services.roadmap_services import (
     create_roadmap,
@@ -14,7 +17,7 @@ from services.roadmap_services import (
 router = APIRouter()
 
 @router.post("/", response_model=dict)
-async def create_roadmap_endpoint(roadmap: Roadmap):
+async def create_roadmap_endpoint(roadmap: Roadmap, current_user: dict = Depends(get_current_admin_user)):
     """
     Endpoint to create a new roadmap.
     """
@@ -87,7 +90,7 @@ async def get_roadmap_endpoint(roadmap_id: str):
     
 
 @router.delete("/{roadmap_id}", response_model=dict)
-async def delete_roadmap_endpoint(roadmap_id: str):
+async def delete_roadmap_endpoint(roadmap_id: str, current_user: dict = Depends(get_current_admin_user)):
     """
     Endpoint to delete a specific roadmap by ID.
     """
@@ -100,7 +103,7 @@ async def delete_roadmap_endpoint(roadmap_id: str):
 
 
 @router.delete("/", response_model=dict)
-async def delete_all_roadmaps_endpoint():
+async def delete_all_roadmaps_endpoint(current_user: dict = Depends(get_current_admin_user)):
     """
     Endpoint to delete all roadmaps.
     """
