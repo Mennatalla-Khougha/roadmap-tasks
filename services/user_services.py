@@ -9,7 +9,7 @@ from schemas.roadmap_model import Roadmap
 from schemas.user_model import UserCreate, UserResponse, UserLogin
 from services.roadmap_services import get_roadmap
 from core.database import get_db
-from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore
+from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore, delete_roadmap_helper
 
 db = get_db()
 
@@ -42,6 +42,7 @@ def create_user(user: UserCreate) -> UserResponse:
             "created_at": now,
             "updated_at": now,
             "is_active": user.is_active,
+            "role": "user",
             "user_roadmaps_ids": [],
         }
         db.collection("users").document(user_id).set(user_data)
@@ -120,6 +121,7 @@ def user_login(user: UserLogin) -> str:
         token = create_access_token(
             subject=user_data["email"],
             user_id=user_data["id"],
+            user_role=user_data["role"],
         )
         return token
     except ValueError as e:
@@ -128,7 +130,7 @@ def user_login(user: UserLogin) -> str:
         raise ValueError(f"Unexpected Error during login: {e}")
 
 
-async def add_roadmap_to_user(email: str, roadmap_id: str) -> UserResponse:
+async def add_roadmap_to_user(roadmap_id: str, email: str) -> UserResponse:
     """
     Add a roadmap to a user's active roadmaps.
     Args:
@@ -278,3 +280,74 @@ async def update_user_roadmap(roadmap_id: str, updated_fields: dict, email: str)
         raise ValueError(f"Invalid input or operation: {e}")
     except Exception as e:
         raise Exception(f"Unexpected Error while updating user's roadmap: {str(e)}")
+
+async def delete_user_roadmap(roadmap_id: str, email: str) -> dict:
+    """
+    Delete a specific roadmap for a user.
+    Args:
+        roadmap_id (str): The ID of the roadmap to be deleted.
+        email (str): The email of the user whose roadmap is to be deleted.
+    Raises:
+        UserNotFoundError: If the user does not exist.
+        RoadmapNotFoundError: If the roadmap does not exist for the user.
+        Exception: For any unexpected errors during the process.
+    Returns:
+        dict: A dictionary containing a success message.
+    """
+    try:
+        user = get_user(email)
+        if not user:
+            raise UserNotFoundError("User not found")
+        if not roadmap_id:
+            raise ValueError("Roadmap ID is required")
+        if roadmap_id not in user.user_roadmaps_ids:
+            raise RoadmapNotFoundError("Roadmap not found in user's roadmaps")
+
+        doc_ref = db.collection("users").document(email).collection("users_roadmaps")
+        message =  await delete_roadmap_helper(doc_ref, roadmap_id)
+        await asyncio.to_thread(doc_ref.parent.update, {
+            "user_roadmaps_ids": firestore.ArrayRemove([roadmap_id]),
+            "updated_at": datetime.now()
+        })
+        return message
+
+    except UserNotFoundError as e:
+        raise UserNotFoundError(f"User not found: {e}")
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap not found: {e}")
+    except Exception as e:
+        raise Exception(f"Unexpected Error while deleting user's roadmap: {str(e)}")
+
+
+async def delete_all_user_roadmaps(email: str) -> dict:
+    """
+    Delete all roadmaps for a user.
+    Args:
+        email (str): The email of the user whose roadmaps are to be deleted.
+    Raises:
+        UserNotFoundError: If the user does not exist.
+        Exception: For any unexpected errors during the process.
+    Returns:
+        dict: A dictionary containing a success message.
+    """
+    try:
+        user = get_user(email)
+        if not user:
+            raise UserNotFoundError("User not found")
+        if not user.user_roadmaps_ids:
+            raise RoadmapNotFoundError("User has no roadmaps to delete")
+
+        doc_ref = db.collection("users").document(email).collection("users_roadmaps")
+        for roadmap_id in user.user_roadmaps_ids:
+            await delete_roadmap_helper(doc_ref, roadmap_id)
+
+        await asyncio.to_thread(doc_ref.parent.update, {"user_roadmaps_ids": []})
+
+        return {"message": "All roadmaps deleted successfully"}
+
+    except UserNotFoundError as e:
+        raise UserNotFoundError(f"User not found: {e}")
+    except RoadmapNotFoundError as e:
+        raise RoadmapNotFoundError(f"Roadmap not found: {e}")
+    except Exception as e:
+        raise Exception(f"Unexpected Error while deleting user's roadmaps: {str(e)}")
