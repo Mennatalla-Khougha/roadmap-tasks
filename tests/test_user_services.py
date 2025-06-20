@@ -1,6 +1,7 @@
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
+from google.cloud import firestore
 from core.exceptions import UserNotFoundError, RoadmapNotFoundError
 from schemas.roadmap_model import Roadmap, Topic, Task # Make sure Task is imported if used directly
 from schemas.user_model import UserCreate, UserLogin, UserResponse
@@ -81,25 +82,7 @@ def sample_roadmap():
         title="Test Roadmap",
         description="A test roadmap",
         total_duration_weeks=4,
-        topics=[
-            Topic(
-                id="topic1",
-                title="Topic 1 Title", # Corrected: Added title field
-                name="Topic 1",
-                description="Description for topic 1",
-                estimated_duration_weeks=2,
-                tasks=[
-                    Task(
-                        id="task1",
-                        name="Task 1",
-                        task="Actual task content for task 1", # Assuming 'task' is the correct field name
-                        description="Desc task 1",
-                        status="not started",  # Valid status
-                        due_date=datetime.now()
-                    )
-                ]
-            )
-        ]
+        topics=[]
     )
 
 
@@ -301,20 +284,20 @@ async def test_add_roadmap_to_user_success(mock_db, mock_get_user_service, mock_
     roadmap_id = "roadmap1"
 
     initial_user_response = UserResponse(**sample_user_response.model_dump())
-    initial_user_response.user_roadmaps_ids = [] # Start with no roadmaps
+    initial_user_response.user_roadmaps_ids = []  # Start with no roadmaps
 
     final_user_response = UserResponse(**sample_user_response.model_dump())
-    final_user_response.user_roadmaps_ids = [roadmap_id] # End with the new roadmap
+    final_user_response.user_roadmaps_ids = [roadmap_id]  # End with the new roadmap
 
     # get_user is called twice: once at the start, once at the end
     mock_get_user_service.side_effect = [initial_user_response, final_user_response]
     mock_get_roadmap_service.return_value = sample_roadmap
 
-    mock_batch = mock_db.batch.return_value # From mock_db fixture
+    mock_batch = mock_db.batch.return_value  # From mock_db fixture
 
     # Mock for user_ref = db.collection("users").document(email)
     mock_user_doc_ref = MagicMock(name="user_doc_ref_in_add_roadmap")
-    mock_user_doc_ref.update = MagicMock(name="user_doc_ref_update_method") # This is sync
+    mock_user_doc_ref.update = MagicMock(name="user_doc_ref_update_method")  # This is sync
     mock_user_doc_ref.collection.return_value = MagicMock(name="users_roadmaps_subcollection_ref")
 
     mock_db.collection.return_value.document.return_value = mock_user_doc_ref
@@ -325,14 +308,14 @@ async def test_add_roadmap_to_user_success(mock_db, mock_get_user_service, mock_
 
         # Assert
         assert mock_get_user_service.call_count == 2
-        mock_get_user_service.assert_any_call(email) # First call
-        mock_get_user_service.assert_any_call(email) # Second call
+        mock_get_user_service.assert_any_call(email)  # First call
+        mock_get_user_service.assert_any_call(email)  # Second call
 
         mock_get_roadmap_service.assert_called_once_with(roadmap_id)
 
         # Check Firestore interactions for user_ref and subcollection
-        mock_db.collection.assert_any_call("users") # For user_ref
-        mock_db.collection.return_value.document.assert_any_call(email) # For user_ref
+        mock_db.collection.assert_any_call("users")  # For user_ref
+        mock_db.collection.return_value.document.assert_any_call(email)  # For user_ref
 
         # Assert write_roadmap call to the subcollection
         mock_user_doc_ref.collection.assert_called_once_with("users_roadmaps")
@@ -340,22 +323,34 @@ async def test_add_roadmap_to_user_success(mock_db, mock_get_user_service, mock_
             mock_user_doc_ref.collection.return_value, sample_roadmap, mock_batch, roadmap_id
         )
 
-        # Assert user_ref.update call (this is synchronous in Firestore client)
+        # Assert user_ref.update call
         mock_user_doc_ref.update.assert_called_once()
+
+        # Inspect the arguments passed to the update call
         update_args, _ = mock_user_doc_ref.update.call_args
         update_payload = update_args[0]
 
-        # Check for ArrayUnion (specific check might require importing firestore or deeper mock inspection)
+        # Assert on the payload
         assert "user_roadmaps_ids" in update_payload
-        assert hasattr(update_payload["user_roadmaps_ids"], '__class__') and "ArrayUnion" in str(type(update_payload["user_roadmaps_ids"]))
-
         assert "updated_at" in update_payload
         assert isinstance(update_payload["updated_at"], datetime)
+
+        # Check the ArrayUnion part robustly
+        array_union_obj = update_payload["user_roadmaps_ids"]
+        if isinstance(firestore, MagicMock):
+            # In CI/mocked environment, firestore.ArrayUnion is a mock
+            firestore.ArrayUnion.assert_called_once_with([roadmap_id])
+            assert array_union_obj == firestore.ArrayUnion.return_value
+        else:
+            # In local/real environment, it's a real class instance
+            assert isinstance(array_union_obj, firestore.ArrayUnion)
+            # The values are stored in a 'values' attribute
+            assert array_union_obj.values == [roadmap_id]
 
         # Assert batch.commit call was passed to asyncio.to_thread
         mock_to_thread.assert_called_once_with(mock_batch.commit)
 
-        assert result == final_user_response # Check the final returned UserResponse
+        assert result == final_user_response  # Check the final returned UserResponse
         assert roadmap_id in result.user_roadmaps_ids
 
 
