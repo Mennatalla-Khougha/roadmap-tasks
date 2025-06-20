@@ -3,7 +3,7 @@ from schemas.roadmap_model import Roadmap
 from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
 import asyncio
 from core.database import get_db, get_redis
-from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore
+from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore, delete_roadmap_helper
 
 db = get_db()
 r = get_redis()
@@ -143,31 +143,8 @@ async def delete_roadmap(roadmap_id: str) -> dict:
     """
     try:
         r.delete(roadmap_id)
-        roadmap_ref = db.collection("roadmaps").document(roadmap_id)
-        doc = await asyncio.to_thread(roadmap_ref.get)
-        if not doc.exists:
-            raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
-
-        # Get all topics under the roadmap
-        topic_docs = await asyncio.to_thread(lambda: list(roadmap_ref.collection("topics").stream()))
-        async def delete_topic_and_tasks(topic_doc):
-            """
-            Delete a topic and all its tasks concurrently.
-            """
-            topic_id = topic_doc.id
-            topic_ref = roadmap_ref.collection("topics").document(topic_id)
-
-            # Get all tasks under the topic
-            task_docs = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
-            await asyncio.gather(*[
-                asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
-                for task in task_docs
-            ])
-            await asyncio.to_thread(topic_ref.delete)
-
-        await asyncio.gather(*[delete_topic_and_tasks(topic) for topic in topic_docs])
-        await asyncio.to_thread(roadmap_ref.delete)
-        return {"message": "Roadmap and all related data deleted successfully"}
+        roadmap_ref = db.collection("roadmaps")
+        return await delete_roadmap_helper(roadmap_ref, roadmap_id)
     except RoadmapNotFoundError:
         raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
     except Exception as e:
