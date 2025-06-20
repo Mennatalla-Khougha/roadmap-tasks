@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from google.cloud import firestore
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import roadmaps, users, tasky
+from routers import roadmaps, users, topics
 from core.database import get_db, get_redis
 
 db = get_db()
@@ -29,7 +29,7 @@ app.add_middleware(
 # router routes
 app.include_router(roadmaps.router, prefix="/roadmaps", tags=["roadmaps"])
 app.include_router(users.router, prefix="/users", tags=["users"])
-app.include_router(tasky.router, prefix="/topics", tags=["topics"])
+app.include_router(topics.router, prefix="/topics", tags=["topics"])
 
 
 @app.get("/")
