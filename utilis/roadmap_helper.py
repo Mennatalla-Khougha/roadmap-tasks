@@ -3,18 +3,19 @@ import re
 
 from google.cloud import firestore
 
-from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError, TopicNotFoundError, TaskNotFoundError
+from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
 from schemas.roadmap_model import Roadmap, Task, Topic
-# from services.roadmap_services import delete_roadmap
 
 
 def generate_id(title: str) -> str:
     """
     Generate a unique ID for the roadmap based on its title.
-    This function converts the title to lowercase, replaces spaces with hyphens,
+    This function converts the title to lowercase,
+    replaces spaces with hyphens,
     and removes special characters.
     """
-    title = re.sub(r'[^\w\s-]', '', title.lower())
+    title = title.lower()
+    title = re.sub(r'[^\w\s-]', '', title)
     title = re.sub(r'\s+', '-', title)
     return title
 
@@ -22,16 +23,17 @@ def generate_id(title: str) -> str:
 async def write_roadmap(
         parent: firestore.CollectionReference,
         roadmap: Roadmap,
-        batch : firestore.WriteBatch,
+        batch: firestore.WriteBatch,
         roadmap_id: str = None,
-        ) -> str:
+) -> str:
     """
     Write a roadmap to Firestore.
     Args:
         parent: Firestore collection reference where the roadmap will be stored
         roadmap: Roadmap object to be written
         batch: Firestore write batch for atomic operations
-        roadmap_id: Optional ID for the roadmap, if not provided, it will be generated
+        roadmap_id: Optional ID for the roadmap, if not provided, it will be
+                    generated
     Returns:
         The ID of the written roadmap
     Raises:
@@ -40,7 +42,8 @@ async def write_roadmap(
     try:
         if not isinstance(roadmap, Roadmap):
             raise InvalidRoadmapError("Invalid roadmap object provided")
-        roadmap_id = roadmap_id if roadmap_id else generate_id(roadmap.title)
+        if not roadmap_id:
+            roadmap_id = generate_id(roadmap.title)
         roadmap_data = roadmap.model_dump(exclude={"topics"})
         roadmap_data["id"] = roadmap_id
         roadmap_data["description"] = roadmap_data.get("description", "")
@@ -96,9 +99,9 @@ async def fetch_topic_tasks(
 
 
 async def fetch_roadmap_topics(
-        parent: firestore.CollectionReference,
-        roadmap_id: str
-    ) -> list[Topic]:
+    parent: firestore.CollectionReference,
+    roadmap_id: str
+) -> list[Topic]:
     """
     Fetch topics for a specific roadmap from Firestore.
     Args:
@@ -111,7 +114,9 @@ async def fetch_roadmap_topics(
         topic_ref = parent.document(roadmap_id).collection("topics")
         topic_docs = await asyncio.to_thread(lambda: list(topic_ref.stream()))
         topics = []
-        async def get_topics_tasks(topic_doc: firestore.DocumentSnapshot) -> Topic:
+
+        async def get_topics_tasks(
+                topic_doc: firestore.DocumentSnapshot) -> Topic:
             """
             Fetch tasks for a topic concurrently.
             """
@@ -123,7 +128,8 @@ async def fetch_roadmap_topics(
         topics = await asyncio.gather(*topics_list)
         return list(topics)
     except Exception as e:
-        raise Exception(f"Unexpected Error while fetching topics: {str(e)}")
+        raise Exception(
+            f"Unexpected Error while fetching topics: {str(e)}")
 
 
 async def fetch_roadmap_from_firestore(
@@ -144,7 +150,8 @@ async def fetch_roadmap_from_firestore(
         doc_ref = parent.document(roadmap_id)
         doc = await asyncio.to_thread(doc_ref.get)
         if not doc.exists:
-            raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found.")
+            raise RoadmapNotFoundError(
+                f"Roadmap with id {roadmap_id} not found.")
         roadmap_data = doc.to_dict()
         roadmap_data.pop("id", None)
         topics = await fetch_roadmap_topics(parent, roadmap_id)
@@ -177,25 +184,32 @@ async def delete_roadmap_helper(
         doc = await asyncio.to_thread(doc_ref.get)
         if not doc.exists:
             raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found")
-        topic_docs = await asyncio.to_thread(lambda: list(doc_ref.collection("topics").stream()))
-        async def delete_topic_and_tasks(topic_doc: firestore.DocumentSnapshot):
+        topic_docs = await asyncio.to_thread(
+            lambda: list(doc_ref.collection("topics").stream()))
+
+        async def delete_topic_and_tasks(
+                topic_doc: firestore.DocumentSnapshot):
             """
             Delete a topic and all its tasks concurrently.
             """
             topic_id = topic_doc.id
             topic_ref = doc_ref.collection("topics").document(topic_id)
 
-            task_docs = await asyncio.to_thread(lambda: list(topic_ref.collection("tasks").stream()))
+            task_docs = await asyncio.to_thread(
+                lambda: list(topic_ref.collection("tasks").stream()))
             await asyncio.gather(*[
-                asyncio.to_thread(lambda: topic_ref.collection("tasks").document(task.id).delete())
+                asyncio.to_thread(lambda: topic_ref.collection(
+                    "tasks").document(task.id).delete())
                 for task in task_docs
             ])
             await asyncio.to_thread(topic_ref.delete)
 
-        await asyncio.gather(*[delete_topic_and_tasks(topic) for topic in topic_docs])
+        await asyncio.gather(
+            *[delete_topic_and_tasks(topic) for topic in topic_docs])
         await asyncio.to_thread(doc_ref.delete)
         return {"message": "Roadmap and all related data deleted successfully"}
     except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found: {str(e)}")
+        raise RoadmapNotFoundError(
+            f"Roadmap {roadmap_id} not found: {str(e)}")
     except Exception as e:
         raise Exception(f"Unexpected Error while deleting roadmap: {str(e)}")

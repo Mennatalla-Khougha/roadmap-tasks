@@ -1,16 +1,19 @@
 import os
-
 import pytest
 from datetime import datetime, timedelta, timezone
-
 from dotenv import load_dotenv
 from jose import jwt, JWTError
 from jose.exceptions import ExpiredSignatureError
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException
 from fastapi.security.http import HTTPAuthorizationCredentials
-
-from core.security import create_access_token, hash_password, pwd_context, verify_password, get_current_user, \
-    get_current_admin_user
+from core.security import (
+    create_access_token,
+    hash_password,
+    pwd_context,
+    verify_password,
+    get_current_user,
+    get_current_admin_user,
+)
 from schemas.user_model import TokenData, UserRole  # Added UserRole import
 
 load_dotenv()
@@ -151,12 +154,16 @@ def test_handle_long_plain_password():
     assert verify_password(plain_password, hashed_password)
 
 
-def test_retrieves_user_data_from_valid_token(setup_test_environment):  # Renamed for clarity
+# Renamed for clarity
+def test_retrieves_user_data_from_valid_token(setup_test_environment):
     subject = "test@example.com"
     user_id = "12345"
     user_role = UserRole.USER  # Use UserRole enum
-    token_str = create_access_token(subject, user_id, user_role=user_role.value)
-    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    token_str = create_access_token(
+        subject, user_id, user_role=user_role.value
+    )
+    auth_creds = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=token_str)
     token_data = get_current_user(auth_creds)
     assert token_data.email == subject
     assert token_data.user_id == user_id
@@ -165,7 +172,8 @@ def test_retrieves_user_data_from_valid_token(setup_test_environment):  # Rename
 
 def test_get_current_user_invalid_scheme(setup_test_environment):
     token_str = create_access_token("test@example.com", "123")
-    auth_creds = HTTPAuthorizationCredentials(scheme="Basic", credentials=token_str)  # Invalid scheme
+    auth_creds = HTTPAuthorizationCredentials(
+        scheme="Basic", credentials=token_str)  # Invalid scheme
     with pytest.raises(HTTPException) as exc_info:
         get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
@@ -179,7 +187,10 @@ def test_get_current_user_no_token():
     assert exc_info.value.detail == "Not authenticated"
 
 
-def test_raises_error_for_expired_token_in_get_current_user(setup_test_environment):  # Renamed for clarity
+# Renamed for clarity
+def test_raises_error_for_expired_token_in_get_current_user(
+    setup_test_environment
+):
     subject = "test@example.com"
     user_id = "12345"
     now = datetime.now(timezone.utc)
@@ -192,23 +203,31 @@ def test_raises_error_for_expired_token_in_get_current_user(setup_test_environme
         "role": "user"
     }
     token_str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    auth_creds = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=token_str)
     with pytest.raises(HTTPException) as exc_info:
         get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Session Expired"
 
 
-def test_raises_error_for_invalid_token_in_get_current_user(setup_test_environment):  # Renamed for clarity
+# Renamed for clarity
+def test_raises_error_for_invalid_token_in_get_current_user(
+    setup_test_environment
+):
     token_str = "invalid.token.value"
-    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    auth_creds = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=token_str)
     with pytest.raises(HTTPException) as exc_info:
         get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Invalid token"
 
 
-def test_handles_missing_user_id_in_token_for_get_current_user(setup_test_environment):  # Renamed for clarity
+# Renamed for clarity
+def test_handles_missing_user_id_in_token_for_get_current_user(
+    setup_test_environment
+):
     subject = "test@example.com"
     now = datetime.now(timezone.utc)
     expires_delta = timedelta(minutes=30)
@@ -221,7 +240,8 @@ def test_handles_missing_user_id_in_token_for_get_current_user(setup_test_enviro
         # "id" is missing
     }
     token_str = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    auth_creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token_str)
+    auth_creds = HTTPAuthorizationCredentials(
+        scheme="Bearer", credentials=token_str)
     with pytest.raises(HTTPException) as exc_info:
         get_current_user(auth_creds)
     assert exc_info.value.status_code == 401
@@ -231,15 +251,12 @@ def test_handles_missing_user_id_in_token_for_get_current_user(setup_test_enviro
 # Tests for get_current_admin_user
 @pytest.mark.asyncio
 async def test_get_current_admin_user_success():
-    admin_user_data = TokenData(email="admin@example.com", user_id="admin123", role=UserRole.ADMIN)
+    admin_user_data = TokenData(
+        email="admin@example.com", user_id="admin123", role=UserRole.ADMIN)
 
     # Mock the dependency get_current_user to return our admin_user_data
     async def mock_dependency():
         return admin_user_data
-
-    # Use the Depends mechanism to inject the mocked dependency
-    # This is a bit conceptual for a unit test; in integration tests, FastAPI handles this.
-    # For unit testing a function that uses Depends, we often test it by providing the dependency's output directly.
 
     result = await get_current_admin_user(current_user=admin_user_data)
     assert result == admin_user_data
@@ -247,10 +264,13 @@ async def test_get_current_admin_user_success():
 
 @pytest.mark.asyncio
 async def test_get_current_admin_user_not_admin():
-    non_admin_user_data = TokenData(email="user@example.com", user_id="user123", role=UserRole.USER)
+    non_admin_user_data = TokenData(
+        email="user@example.com", user_id="user123", role=UserRole.USER)
 
     with pytest.raises(HTTPException) as exc_info:
         await get_current_admin_user(current_user=non_admin_user_data)
 
     assert exc_info.value.status_code == 403
-    assert exc_info.value.detail == "You do not have permission to perform this action"
+    assert exc_info.value.detail == (
+        "You do not have permission to perform this action"
+    )

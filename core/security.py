@@ -3,7 +3,7 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, OAuth2PasswordBearer
+from fastapi.security import HTTPBearer
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
@@ -15,11 +15,8 @@ load_dotenv()
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM")
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 oauth2_scheme = HTTPBearer()
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
-# Create a password context with the default hashing ALGORITHM
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
@@ -76,7 +73,9 @@ def create_access_token(
     return encoded_jwt
 
 
-def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> TokenData:
+def get_current_user(
+        token: Annotated[str, Depends(oauth2_scheme)]
+) -> TokenData:
     """
     Get the current user from the JWT token.
     Args:
@@ -104,11 +103,13 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> TokenData
         raise HTTPException(status_code=401, detail="Invalid token")
 
 
-async def get_current_admin_user(current_user: TokenData = Depends(get_current_user)) -> TokenData:
+async def get_current_admin_user(
+        current_user: TokenData = Depends(get_current_user)
+) -> TokenData:
     """
     Dependency to ensure the current user is an admin.
     Args:
-        current_user (TokenData): The current user data obtained from the JWT token.
+        current_user (TokenData): The current user data obtained.
     Raises:
         HTTPException: If the user is not an admin.
     Returns:

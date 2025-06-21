@@ -7,7 +7,7 @@ from core.exceptions import UserNotFoundError, RoadmapNotFoundError
 from core.security import get_current_user
 from main import app
 from schemas.roadmap_model import Topic, Task, Roadmap
-from schemas.user_model import UserCreate, UserResponse, UserLogin, TokenData
+from schemas.user_model import UserCreate, UserResponse, TokenData
 
 # Create a test client
 client = TestClient(app)
@@ -51,7 +51,14 @@ mock_topic = Topic(
     description="Description for Topic 1",
     duration_days=5,
     resources=["Resource1"],
-    tasks=[Task(id="task1", task="Task 1", description="Description for Task 1", is_completed=False)]
+    tasks=[
+        Task(
+            id="task1",
+            task="Task 1",
+            description="Description for Task 1",
+            is_completed=False
+        )
+    ]
 )
 
 mock_roadmap_data = Roadmap(
@@ -67,7 +74,9 @@ mock_roadmap_list_data = [mock_roadmap_data]
 
 class TestUserRoutes:
     @patch("routers.users.create_user")
-    def test_create_user_endpoint_success(self, mock_create_user, user_data, user_response_data):
+    def test_create_user_endpoint_success(
+        self, mock_create_user, user_data, user_response_data
+    ):
         mock_create_user.return_value = UserResponse(**user_response_data)
         response = client.post("/users/register", json=user_data)
         assert response.status_code == 200
@@ -79,21 +88,27 @@ class TestUserRoutes:
         assert called_arg.username == user_data["username"]
 
     @patch("routers.users.create_user")
-    def test_create_user_endpoint_value_error(self, mock_create_user, user_data):
+    def test_create_user_endpoint_value_error(
+        self, mock_create_user, user_data
+    ):
         mock_create_user.side_effect = ValueError("Email already exists")
         response = client.post("/users/register", json=user_data)
         assert response.status_code == 400
         assert "Email already exists" in response.json()["detail"]
 
     @patch("routers.users.create_user")
-    def test_create_user_endpoint_unexpected_error(self, mock_create_user, user_data):
+    def test_create_user_endpoint_unexpected_error(
+        self, mock_create_user, user_data
+    ):
         mock_create_user.side_effect = Exception("Unexpected error")
         response = client.post("/users/register", json=user_data)
         assert response.status_code == 500
         assert "Unexpected Error" in response.json()["detail"]
 
     @patch("routers.users.get_user")
-    def test_get_user_endpoint_success(self, mock_get_user, user_response_data):
+    def test_get_user_endpoint_success(
+        self, mock_get_user, user_response_data
+    ):
         mock_get_user.return_value = UserResponse(**user_response_data)
         response = client.get("/users/user")
         assert response.status_code == 200
@@ -117,7 +132,10 @@ class TestUserRoutes:
 
     @patch("routers.users.user_login")
     def test_login_user_endpoint_success(self, mock_user_login):
-        login_data = {"email": "test@example.com", "password": "securepassword123"}
+        login_data = {
+            "email": "test@example.com",
+            "password": "securepassword123"
+        }
         mock_user_login.return_value = "valid_token"
         response = client.post("/users/login", json=login_data)
         assert response.status_code == 200
@@ -132,15 +150,21 @@ class TestUserRoutes:
         assert "Invalid password or email" in response.json()["detail"]
 
     @patch("routers.users.add_roadmap_to_user", new_callable=AsyncMock)
-    def test_add_roadmap_to_user_success(self, mock_add_roadmap, user_response_data):
+    def test_add_roadmap_to_user_success(
+        self, mock_add_roadmap, user_response_data
+    ):
         updated_user_response_data = user_response_data.copy()
         updated_user_response_data["user_roadmaps_ids"] = ["roadmap123"]
-        mock_add_roadmap.return_value = UserResponse(**updated_user_response_data)
+        mock_add_roadmap.return_value = UserResponse(
+            **updated_user_response_data
+        )
         response = client.post("/users/roadmaps?roadmap_id=roadmap123")
         assert response.status_code == 200
         response_json = response.json()
         assert "roadmap123" in response_json["user_roadmaps_ids"]
-        mock_add_roadmap.assert_called_once_with("roadmap123", "test@example.com")
+        mock_add_roadmap.assert_called_once_with(
+            "roadmap123", "test@example.com"
+        )
 
     @patch("routers.users.add_roadmap_to_user", new_callable=AsyncMock)
     def test_add_roadmap_to_user_user_not_found(self, mock_add_roadmap):
@@ -180,7 +204,9 @@ class TestUserRoutes:
 
     @patch("routers.users.get_user_roadmaps", new_callable=AsyncMock)
     def test_get_user_roadmaps_roadmap_not_found(self, mock_get_roadmaps):
-        mock_get_roadmaps.side_effect = RoadmapNotFoundError("No roadmaps found")
+        mock_get_roadmaps.side_effect = RoadmapNotFoundError(
+            "No roadmaps found"
+        )
         response = client.get("/users/roadmaps")
         assert response.status_code == 404
         assert "No roadmaps found" in response.json()["detail"]
@@ -198,7 +224,9 @@ class TestUserRoutes:
         response = client.get("/users/roadmap/roadmap123")
         assert response.status_code == 200
         assert response.json()["id"] == "roadmap123"
-        mock_get_roadmap.assert_called_once_with("roadmap123", "test@example.com")
+        mock_get_roadmap.assert_called_once_with(
+            "roadmap123", "test@example.com"
+        )
 
     @patch("routers.users.get_user_roadmap", new_callable=AsyncMock)
     def test_get_user_roadmap_user_not_found(self, mock_get_roadmap):
@@ -209,7 +237,9 @@ class TestUserRoutes:
 
     @patch("routers.users.get_user_roadmap", new_callable=AsyncMock)
     def test_get_user_roadmap_roadmap_not_found(self, mock_get_roadmap):
-        mock_get_roadmap.side_effect = RoadmapNotFoundError("Roadmap not found")
+        mock_get_roadmap.side_effect = (
+            RoadmapNotFoundError("Roadmap not found")
+        )
         response = client.get("/users/roadmap/roadmap123")
         assert response.status_code == 404
         assert "Roadmap not found" in response.json()["detail"]

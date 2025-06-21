@@ -8,11 +8,12 @@ from core.security import get_current_admin_user
 
 client = TestClient(app)
 
-# Define and apply the dependency override for the admin user
+
 async def override_get_current_admin_user():
     return {"username": "test_admin", "is_admin": True}
 
-app.dependency_overrides[get_current_admin_user] = override_get_current_admin_user
+app.dependency_overrides[get_current_admin_user] = (
+    override_get_current_admin_user)
 
 
 # Mock data for testing
@@ -57,21 +58,31 @@ mock_paginated_response = {
 @pytest.fixture
 def mock_services():
     """Mock all roadmap service functions"""
-    with patch("routers.roadmaps.create_roadmap", new_callable=AsyncMock) as mock_create, \
-            patch("routers.roadmaps.get_all_roadmaps", new_callable=AsyncMock) as mock_get_all, \
-            patch("routers.roadmaps.get_all_roadmaps_ids", new_callable=AsyncMock) as mock_get_ids, \
-            patch("routers.roadmaps.get_roadmap", new_callable=AsyncMock) as mock_get, \
-            patch("routers.roadmaps.delete_roadmap", new_callable=AsyncMock) as mock_delete, \
-            patch("routers.roadmaps.delete_all_roadmaps", new_callable=AsyncMock) as mock_delete_all, \
-            patch("routers.roadmaps.get_roadmaps_paginated", new_callable=AsyncMock) as mock_paginated:
+    with patch("routers.roadmaps.create_roadmap",
+               new_callable=AsyncMock) as mock_create, \
+            patch("routers.roadmaps.get_all_roadmaps",
+                  new_callable=AsyncMock) as mock_get_all, \
+            patch("routers.roadmaps.get_all_roadmaps_ids",
+                  new_callable=AsyncMock) as mock_get_ids, \
+            patch("routers.roadmaps.get_roadmap",
+                  new_callable=AsyncMock) as mock_get, \
+            patch("routers.roadmaps.delete_roadmap",
+                  new_callable=AsyncMock) as mock_delete, \
+            patch("routers.roadmaps.delete_all_roadmaps",
+                  new_callable=AsyncMock) as mock_delete_all, \
+            patch("routers.roadmaps.get_roadmaps_paginated",
+                  new_callable=AsyncMock) as mock_paginated:
         mock_create.return_value = mock_roadmap_response
         mock_get_all.return_value = mock_roadmap_list
         mock_get_ids.return_value = mock_roadmap_ids
         mock_get.return_value = mock_roadmap
-        mock_delete.return_value = {"message": "Roadmap and all related data deleted successfully"}
-        mock_delete_all.return_value = {"message": "All roadmaps deleted successfully"}
+        mock_delete.return_value = {
+            "message": "Roadmap and all related data deleted successfully"}
+        mock_delete_all.return_value = {
+            "message": "All roadmaps deleted successfully"}
         mock_paginated.return_value = {
-            "roadmaps": [roadmap.model_dump() for roadmap in mock_roadmap_list],
+            "roadmaps": [roadmap.model_dump()
+                         for roadmap in mock_roadmap_list],
             "next_cursor": "test-roadmap",
             "has_more": False
         }
@@ -99,7 +110,8 @@ class TestRoadmapRoutes:
 
     def test_create_roadmap_invalid_data(self, mock_services):
         """Test roadmap creation with invalid data"""
-        mock_services["create"].side_effect = InvalidRoadmapError("Invalid roadmap data")
+        mock_services["create"].side_effect = InvalidRoadmapError(
+            "Invalid roadmap data")
 
         response = client.post("/roadmaps/", json=mock_roadmap.model_dump())
 
@@ -125,7 +137,8 @@ class TestRoadmapRoutes:
 
     def test_get_all_roadmap_ids_not_found(self, mock_services):
         """Test retrieving roadmap IDs when none exist"""
-        mock_services["get_ids"].side_effect = RoadmapNotFoundError("No roadmaps found")
+        mock_services["get_ids"].side_effect = RoadmapNotFoundError(
+            "No roadmaps found")
 
         response = client.get("/roadmaps/ids")
 
@@ -143,7 +156,8 @@ class TestRoadmapRoutes:
 
     def test_get_all_roadmaps_not_found(self, mock_services):
         """Test retrieving roadmaps when none exist"""
-        mock_services["get_all"].side_effect = RoadmapNotFoundError("No roadmaps found")
+        mock_services["get_all"].side_effect = RoadmapNotFoundError(
+            "No roadmaps found")
 
         response = client.get("/roadmaps/")
 
@@ -152,14 +166,16 @@ class TestRoadmapRoutes:
 
     def test_get_paginated_roadmaps_success(self, mock_services):
         """Test successful retrieval of paginated roadmaps"""
-        response = client.get("/roadmaps/roadmaps-paginated?limit=5&cursor=last-id")
+        response = client.get(
+            "/roadmaps/roadmaps-paginated?limit=5&cursor=last-id")
 
         assert response.status_code == 200
         data = response.json()
         assert "roadmaps" in data
         assert "pagination" in data
         assert data["pagination"]["next_cursor"] == "test-roadmap"
-        mock_services["paginated"].assert_called_once_with(limit=5, last_doc_id="last-id")
+        mock_services["paginated"].assert_called_once_with(
+            limit=5, last_doc_id="last-id")
 
     def test_get_roadmap_by_id_success(self, mock_services):
         """Test successful retrieval of a specific roadmap"""
@@ -171,7 +187,8 @@ class TestRoadmapRoutes:
 
     def test_get_roadmap_by_id_not_found(self, mock_services):
         """Test retrieving a roadmap that doesn't exist"""
-        mock_services["get"].side_effect = RoadmapNotFoundError("Roadmap not found")
+        mock_services["get"].side_effect = RoadmapNotFoundError(
+            "Roadmap not found")
 
         response = client.get("/roadmaps/nonexistent")
 
@@ -189,7 +206,8 @@ class TestRoadmapRoutes:
 
     def test_delete_roadmap_not_found(self, mock_services):
         """Test deleting a roadmap that doesn't exist"""
-        mock_services["delete"].side_effect = RoadmapNotFoundError("Roadmap not found")
+        mock_services["delete"].side_effect = RoadmapNotFoundError(
+            "Roadmap not found")
 
         response = client.delete("/roadmaps/nonexistent")
 
@@ -202,12 +220,14 @@ class TestRoadmapRoutes:
 
         assert response.status_code == 200
         assert "message" in response.json()
-        assert "All roadmaps deleted successfully" in response.json()["message"]
+        assert "All roadmaps deleted successfully" in response.json()[
+            "message"]
         mock_services["delete_all"].assert_called_once()
 
     def test_delete_all_roadmaps_not_found(self, mock_services):
         """Test deleting all roadmaps when none exist"""
-        mock_services["delete_all"].side_effect = RoadmapNotFoundError("No roadmaps found")
+        mock_services["delete_all"].side_effect = RoadmapNotFoundError(
+            "No roadmaps found")
 
         response = client.delete("/roadmaps/")
 

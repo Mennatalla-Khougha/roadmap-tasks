@@ -16,8 +16,12 @@ from services.roadmap_services import (
 
 router = APIRouter()
 
+
 @router.post("/", response_model=dict)
-async def create_roadmap_endpoint(roadmap: Roadmap, current_user: dict = Depends(get_current_admin_user)):
+async def create_roadmap_endpoint(
+        roadmap: Roadmap,
+        current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to create a new roadmap.
     """
@@ -26,7 +30,8 @@ async def create_roadmap_endpoint(roadmap: Roadmap, current_user: dict = Depends
     except InvalidRoadmapError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/ids", response_model=list[str])
@@ -39,7 +44,8 @@ async def get_all_roadmaps_id_endpoint():
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/", response_model=list[Roadmap])
@@ -54,8 +60,9 @@ async def get_all_roadmaps_endpoint():
     except InvalidRoadmapError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
+
 
 @router.get("/roadmaps-paginated", response_model=dict)
 async def get_roadmaps(
@@ -74,6 +81,7 @@ async def get_roadmaps(
         }
     }
 
+
 @router.get("/{roadmap_id}", response_model=Roadmap)
 async def get_roadmap_endpoint(roadmap_id: str):
     """
@@ -86,11 +94,15 @@ async def get_roadmap_endpoint(roadmap_id: str):
     except InvalidRoadmapError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
-    
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
+
 
 @router.delete("/{roadmap_id}", response_model=dict)
-async def delete_roadmap_endpoint(roadmap_id: str, current_user: dict = Depends(get_current_admin_user)):
+async def delete_roadmap_endpoint(
+        roadmap_id: str,
+        current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to delete a specific roadmap by ID.
     """
@@ -99,11 +111,14 @@ async def delete_roadmap_endpoint(roadmap_id: str, current_user: dict = Depends(
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.delete("/", response_model=dict)
-async def delete_all_roadmaps_endpoint(current_user: dict = Depends(get_current_admin_user)):
+async def delete_all_roadmaps_endpoint(
+        current_user: dict = Depends(get_current_admin_user)
+):
     """
     Endpoint to delete all roadmaps.
     """
@@ -112,4 +127,5 @@ async def delete_all_roadmaps_endpoint(current_user: dict = Depends(get_current_
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")

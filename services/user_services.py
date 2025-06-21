@@ -1,15 +1,15 @@
 import asyncio
-from datetime import datetime, timedelta
-
+from datetime import datetime
 from google.cloud import firestore
-
 from core.exceptions import RoadmapNotFoundError, UserNotFoundError
 from core.security import hash_password, verify_password, create_access_token
 from schemas.roadmap_model import Roadmap
 from schemas.user_model import UserCreate, UserResponse, UserLogin
 from services.roadmap_services import get_roadmap
 from core.database import get_db
-from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore, delete_roadmap_helper
+from utilis.roadmap_helper import (write_roadmap,
+                                   fetch_roadmap_from_firestore,
+                                   delete_roadmap_helper)
 
 db = get_db()
 
@@ -22,8 +22,9 @@ def create_user(user: UserCreate) -> UserResponse:
     Args:
         user (UserCreate): The user data to be created.
     Raises:
-        ValueError: If the email already exists or if there is an error during user creation.
-        FileNotFoundError: If the user does not exist when trying to retrieve it.
+        ValueError: If the email already exists or
+                    if there is an error during user creation.
+        UserNotFoundError: If the user does not exist.
     Returns:
         UserResponse: The created user data.
     """
@@ -58,7 +59,7 @@ def create_user(user: UserCreate) -> UserResponse:
         raise ValueError(f"Error creating user: {e}")
 
 
-def get_user(email:str) -> UserResponse:
+def get_user(email: str) -> UserResponse:
     """
     Get a user by email from the database.
     This function retrieves a user document from Firestore by email.
@@ -78,7 +79,7 @@ def get_user(email:str) -> UserResponse:
         if not user_ref.exists:
             raise UserNotFoundError("No user exist with that Email")
         user_ref = user_ref.to_dict()
-        return UserResponse (
+        return UserResponse(
             id=user_ref.get("id", user_id),
             username=user_ref.get("username"),
             email=user_ref.get("email"),
@@ -103,7 +104,8 @@ def user_login(user: UserLogin) -> str:
     Args:
         user (UserLogin): The user login data containing email and password.
     Raises:
-        ValueError: If the email or password is missing, or if the authentication fails.
+        ValueError: If the email or password is missing,
+                    or if the authentication fails.
         FileNotFoundError: If the user does not exist in the database.
     Returns:
         str: An access token for the authenticated user.
@@ -137,7 +139,8 @@ async def add_roadmap_to_user(roadmap_id: str, email: str) -> UserResponse:
         email (str): The email of the user to whom the roadmap will be added.
         roadmap_id (str): The ID of the roadmap to be added.
     Raises:
-        ValueError: If the roadmap ID is missing or if the roadmap already exists in the user's roadmaps.
+        ValueError: If the roadmap ID is missing or if the roadmap
+                    already exists in the user's roadmaps.
         FileNotFoundError: If the user does not exist.
         Exception: For any unexpected errors during the process.
     Returns:
@@ -176,7 +179,8 @@ async def get_user_roadmaps(email: str) -> list[Roadmap]:
     Args:
         email (str): The email of the user whose roadmaps are to be retrieved.
     Raises:
-        FileNotFoundError: If the user does not exist or if no roadmaps are found for the user.
+        FileNotFoundError: If the user does not exist or
+                            if no roadmaps are found for the user.
         Exception: For any unexpected errors during the process.
     Returns:
         list[Roadmap]: A list of roadmaps associated with the user.
@@ -207,7 +211,8 @@ async def get_user_roadmap(roadmap_id: str, email: str) -> Roadmap:
         email (str): The email of the user whose roadmaps are to be retrieved.
         roadmap_id (str): The ID of the roadmap to be retrieved.
     Raises:
-        FileNotFoundError: If the user does not exist or if the roadmap does not exist.
+        FileNotFoundError: If the user does not exist
+                            or if the roadmap does not exist.
         Exception: For any unexpected errors during the process.
     Returns:
         UserResponse: The user data with the specified roadmap included.
@@ -220,31 +225,40 @@ async def get_user_roadmap(roadmap_id: str, email: str) -> Roadmap:
             raise ValueError("Roadmap ID is required")
         if roadmap_id not in user.user_roadmaps_ids:
             raise RoadmapNotFoundError("Roadmap not found in user's roadmaps")
-        doc_ref = db.collection("users").document(email).collection("users_roadmaps")
+        doc_ref = db.collection("users").document(
+            email).collection("users_roadmaps")
         roadmap = await fetch_roadmap_from_firestore(doc_ref, roadmap_id)
         return roadmap
     except UserNotFoundError as e:
         raise UserNotFoundError(f"Error retrieving user's roadmaps: {e}")
     except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(f"Roadmap {roadmap_id} not found for user {email}: {e}")
+        raise RoadmapNotFoundError(
+            f"Roadmap {roadmap_id} not found for user {email}: {e}")
     except ValueError as e:
         raise ValueError(f"Invalid input: {e}")
     except Exception as e:
         raise Exception(f"Unexpected Error: {e}")
 
 
-async def update_user_roadmap(roadmap_id: str, updated_fields: dict, email: str) -> str:
+async def update_user_roadmap(
+        roadmap_id: str,
+        updated_fields: dict,
+        email: str
+) -> str:
     """
     Update a specific roadmap for a user.
     Args:
         roadmap_id (str): The ID of the roadmap to be updated.
-        updated_fields (dict): A dictionary containing the fields to be updated in the roadmap.
-                               Only 'title', 'total_duration_weeks', and 'description' are allowed.
+        updated_fields (dict): A dictionary containing the fields to be
+                                updated in the roadmap.Only 'title',
+                                'total_duration_weeks', and
+                                'description' are allowed.
         email (str): The email of the user whose roadmap is to be updated.
     Raises:
         UserNotFoundError: If the user does not exist.
         RoadmapNotFoundError: If the roadmap does not exist for the user.
-        ValueError: If the roadmap ID or email is invalid, or if trying to update disallowed fields.
+        ValueError: If the roadmap ID or email is invalid,
+        or if trying to update disallowed fields.
         Exception: For any unexpected errors during the process.
     Returns:
         Roadmap: The updated roadmap object.
@@ -257,16 +271,21 @@ async def update_user_roadmap(roadmap_id: str, updated_fields: dict, email: str)
             raise ValueError("Roadmap ID is required")
         if roadmap_id not in user.user_roadmaps_ids:
             raise RoadmapNotFoundError("Roadmap not found in user's roadmaps")
-        allowed_update_fields = {"title", "total_duration_weeks", "description"}
+        allowed_update_fields = {
+            "title", "total_duration_weeks", "description"}
         fields_to_update = {
-            key: value for key, value in updated_fields.items() if key in allowed_update_fields
+            key: value for key, value in updated_fields.items()
+            if key in allowed_update_fields
         }
         if not fields_to_update:
-            raise ValueError("No valid fields provided for update or all fields are disallowed.")
-        doc_ref = db.collection("users").document(email).collection("users_roadmaps").document(roadmap_id)
+            raise ValueError(
+                "No valid fields provided for update.")
+        doc_ref = db.collection("users").document(
+            email).collection("users_roadmaps").document(roadmap_id)
         doc_snapshot = await asyncio.to_thread(doc_ref.get)
         if not doc_snapshot.exists:
-            raise RoadmapNotFoundError(f"Roadmap with id {roadmap_id} not found for user {email}")
+            raise RoadmapNotFoundError(
+                f"Roadmap with id {roadmap_id} not found for user {email}")
         fields_to_update["updated_at"] = datetime.now()
         await asyncio.to_thread(doc_ref.update, fields_to_update)
 
@@ -279,7 +298,9 @@ async def update_user_roadmap(roadmap_id: str, updated_fields: dict, email: str)
     except ValueError as e:
         raise ValueError(f"Invalid input or operation: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected Error while updating user's roadmap: {str(e)}")
+        raise Exception(
+            f"Unexpected Error while updating user's roadmap: {str(e)}")
+
 
 async def delete_user_roadmap(roadmap_id: str, email: str) -> dict:
     """
@@ -303,8 +324,9 @@ async def delete_user_roadmap(roadmap_id: str, email: str) -> dict:
         if roadmap_id not in user.user_roadmaps_ids:
             raise RoadmapNotFoundError("Roadmap not found in user's roadmaps")
 
-        doc_ref = db.collection("users").document(email).collection("users_roadmaps")
-        message =  await delete_roadmap_helper(doc_ref, roadmap_id)
+        doc_ref = db.collection("users").document(
+            email).collection("users_roadmaps")
+        message = await delete_roadmap_helper(doc_ref, roadmap_id)
         await asyncio.to_thread(doc_ref.parent.update, {
             "user_roadmaps_ids": firestore.ArrayRemove([roadmap_id]),
             "updated_at": datetime.now()
@@ -316,7 +338,8 @@ async def delete_user_roadmap(roadmap_id: str, email: str) -> dict:
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap not found: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected Error while deleting user's roadmap: {str(e)}")
+        raise Exception(
+            f"Unexpected Error while deleting user's roadmap: {str(e)}")
 
 
 async def delete_all_user_roadmaps(email: str) -> dict:
@@ -337,11 +360,13 @@ async def delete_all_user_roadmaps(email: str) -> dict:
         if not user.user_roadmaps_ids:
             raise RoadmapNotFoundError("User has no roadmaps to delete")
 
-        doc_ref = db.collection("users").document(email).collection("users_roadmaps")
+        doc_ref = db.collection("users").document(
+            email).collection("users_roadmaps")
         for roadmap_id in user.user_roadmaps_ids:
             await delete_roadmap_helper(doc_ref, roadmap_id)
 
-        await asyncio.to_thread(doc_ref.parent.update, {"user_roadmaps_ids": []})
+        await asyncio.to_thread(doc_ref.parent.update,
+                                {"user_roadmaps_ids": []})
 
         return {"message": "All roadmaps deleted successfully"}
 
@@ -350,4 +375,5 @@ async def delete_all_user_roadmaps(email: str) -> dict:
     except RoadmapNotFoundError as e:
         raise RoadmapNotFoundError(f"Roadmap not found: {e}")
     except Exception as e:
-        raise Exception(f"Unexpected Error while deleting user's roadmaps: {str(e)}")
+        raise Exception(
+            f"Unexpected Error while deleting user's roadmaps: {str(e)}")

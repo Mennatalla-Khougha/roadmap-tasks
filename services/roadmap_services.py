@@ -1,9 +1,13 @@
 import json
 from schemas.roadmap_model import Roadmap
-from core.exceptions import RoadmapError, InvalidRoadmapError, RoadmapNotFoundError
+from core.exceptions import (RoadmapError,
+                             InvalidRoadmapError,
+                             RoadmapNotFoundError)
 import asyncio
 from core.database import get_db, get_redis
-from utilis.roadmap_helper import write_roadmap, fetch_roadmap_from_firestore, delete_roadmap_helper
+from utilis.roadmap_helper import (write_roadmap,
+                                   fetch_roadmap_from_firestore,
+                                   delete_roadmap_helper)
 
 db = get_db()
 r = get_redis()
@@ -36,7 +40,7 @@ async def get_all_roadmaps_ids() -> list[str]:
     try:
         docs = await asyncio.to_thread(
             lambda: list(db.collection("roadmaps").stream())
-            )
+        )
         roadmaps_ids = [doc.id for doc in docs]
         return roadmaps_ids
     except RoadmapError as e:
@@ -64,10 +68,13 @@ async def get_all_roadmaps() -> list[Roadmap]:
         raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
 
-async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None) -> dict:
+async def get_roadmaps_paginated(
+        limit: int = 10,
+        last_doc_id: str = None
+) -> dict:
     """
     Fetch roadmaps with pagination and concurrent processing
-    
+
     Args:
         limit: Number of roadmaps to fetch at once
         last_doc_id: ID of the last document from previous page
@@ -87,7 +94,8 @@ async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None) -> di
 
             # Start after the last document
             query = query.start_after(last_doc)
-        query = query.limit(limit + 1)  # Get one extra to check if there are more
+        # Get one extra to check if there are more
+        query = query.limit(limit + 1)
         docs = await asyncio.to_thread(lambda: list(query.stream()))
 
         # Check if there are more results
@@ -106,7 +114,7 @@ async def get_roadmaps_paginated(limit: int = 10, last_doc_id: str = None) -> di
             "next_cursor": next_cursor,
             "has_more": has_more
         }
-        
+
     except RoadmapError as e:
         raise RoadmapError(f"Error fetching roadmaps: {str(e)}")
 
@@ -118,8 +126,8 @@ async def get_roadmap(roadmap_id: str) -> Roadmap:
     try:
         cached_roadmap = await asyncio.to_thread(r.get, roadmap_id)
         if cached_roadmap:
-          roadmap_dict = json.loads(cached_roadmap)
-          return Roadmap(**roadmap_dict)
+            roadmap_dict = json.loads(cached_roadmap)
+            return Roadmap(**roadmap_dict)
 
         doc_ref = db.collection("roadmaps")
         roadmap = await fetch_roadmap_from_firestore(doc_ref, roadmap_id)

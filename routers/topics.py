@@ -1,8 +1,13 @@
 from fastapi import APIRouter, HTTPException
-from core.exceptions import RoadmapNotFoundError, TopicNotFoundError, InvalidTopicError
+from core.exceptions import (RoadmapNotFoundError,
+                             TopicNotFoundError,
+                             InvalidTopicError)
 from schemas.roadmap_model import Topic, Task
 
-from services.topic_services import get_all_topics, get_topic, get_all_topics_ids, get_all_tasks
+from services.topic_services import (get_all_topics,
+                                     get_topic,
+                                     get_all_topics_ids,
+                                     get_all_tasks)
 
 router = APIRouter()
 
@@ -23,7 +28,8 @@ async def get_all_topics_endpoint(roadmap_id: str):
     except TopicNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/ids", response_model=list[str])
@@ -39,10 +45,11 @@ async def get_all_topics_ids_endpoint(roadmap_id: str):
     except TopicNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
-@router.get("/{topic_id}", response_model= Topic)
+@router.get("/{topic_id}", response_model=Topic)
 async def get_topic_endpoint(roadmap_id: str, topic_id: str):
     """
     Get a specific topic from the roadmap.
@@ -55,7 +62,8 @@ async def get_topic_endpoint(roadmap_id: str, topic_id: str):
     except InvalidTopicError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected Error: {str(e)}")
 
 
 @router.get("/{topic_id}/tasks", response_model=list[Task])
@@ -91,6 +99,7 @@ async def get_task_endpoint(roadmap_id: str, topic_id: str, task_id: str):
         for task in tasks:
             if task.id == task_id:
                 return task
-        raise RoadmapNotFoundError(f"Task with id {task_id} not found in topic {topic_id}.")
+        raise RoadmapNotFoundError(
+            f"Task with id {task_id} not found in topic {topic_id}.")
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))

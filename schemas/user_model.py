@@ -32,7 +32,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     is_active: bool = False
     user_roadmaps_ids: list[str] = Field(default_factory=list)
-    user_roadmaps: list[Roadmap] =  Field(default_factory=list)
+    user_roadmaps: list[Roadmap] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

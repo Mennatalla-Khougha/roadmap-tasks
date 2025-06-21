@@ -20,6 +20,7 @@ class Task(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 class Topic(BaseModel):
     id: str | None = None
     title: str
@@ -29,6 +30,7 @@ class Topic(BaseModel):
     tasks: list[Task] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
 
 class Roadmap(BaseModel):
     id: str | None = None

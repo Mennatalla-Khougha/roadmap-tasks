@@ -1,9 +1,6 @@
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch, call
-import asyncio
-
-from google.cloud.firestore import WriteBatch
 from schemas.roadmap_model import Roadmap, Topic, Task
 from core.exceptions import RoadmapNotFoundError, InvalidRoadmapError
 from services.roadmap_services import (
@@ -94,12 +91,13 @@ async def test_write_roadmap():
                 duration_days=7,
                 resources=["link1"],
                 tasks=[
-                    Task(task="Learn variables", description="", completed=False)
+                    Task(task="Learn variables", description="",
+                         completed=False)
                 ]
             )
         ]
     )
-    batch = MagicMock()  # Corrected line: provide a generic mock for the batch parameter
+    batch = MagicMock()
 
     # Mock document references
     roadmap_ref = MagicMock()
@@ -132,17 +130,20 @@ async def test_create_roadmap(mock_db, sample_roadmap):
     mock_db.batch.return_value = MagicMock()
     mock_db.collection.return_value = MagicMock()
 
-    with patch("services.roadmap_services.write_roadmap", new_callable=AsyncMock) as mock_write, \
-         patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
+    with patch("services.roadmap_services.write_roadmap",
+               new_callable=AsyncMock) as mock_write, \
+            patch("asyncio.to_thread",
+                  new_callable=AsyncMock) as mock_to_thread:
         mock_write.return_value = "python-roadmap"
 
         # Call function
         result = await create_roadmap(sample_roadmap)
 
         # Assert
-        assert result == {"roadmap_id": "python-roadmap", "roadmap_title": "Python Roadmap"}
+        assert result == {"roadmap_id": "python-roadmap",
+                          "roadmap_title": "Python Roadmap"}
         mock_write.assert_called_once()
-        mock_to_thread.assert_called_once()  # Check that it was called, not the count
+        mock_to_thread.assert_called_once()  # Check that it was called
 
 
 @pytest.mark.asyncio
@@ -168,14 +169,17 @@ async def test_get_all_roadmaps_ids(mock_db):
 @pytest.mark.asyncio
 async def test_get_all_roadmaps(mock_redis, sample_roadmap):
     # Setup
-    with patch("services.roadmap_services.get_all_roadmaps_ids", new_callable=AsyncMock) as mock_get_ids:
+    with patch("services.roadmap_services.get_all_roadmaps_ids",
+               new_callable=AsyncMock) as mock_get_ids:
         mock_get_ids.return_value = ["roadmap1", "roadmap2"]
 
         # Case 1: Roadmap in cache
-        mock_redis.get.side_effect = lambda x: json.dumps(sample_roadmap.model_dump()) if x == "roadmap1" else None
+        mock_redis.get.side_effect = lambda x: json.dumps(
+            sample_roadmap.model_dump()) if x == "roadmap1" else None
 
         # Case 2: Roadmap not in cache
-        with patch("services.roadmap_services.get_roadmap", new_callable=AsyncMock) as mock_get_roadmap:
+        with patch("services.roadmap_services.get_roadmap",
+                   new_callable=AsyncMock) as mock_get_roadmap:
             mock_get_roadmap.return_value = sample_roadmap
 
             # Call function
@@ -227,7 +231,8 @@ async def test_get_roadmap_not_found(mock_db, mock_redis):
     # Patch with our custom function
     with patch("asyncio.to_thread", new=custom_mock_to_thread):
         # Call function and expect RoadmapNotFoundError
-        with pytest.raises(RoadmapNotFoundError, match="Roadmap nonexistent not found"):
+        with pytest.raises(RoadmapNotFoundError,
+                           match="Roadmap nonexistent not found"):
             await get_roadmap("nonexistent")
 
         # Verify Redis get was called
@@ -243,21 +248,24 @@ async def test_get_roadmaps_paginated(mock_db):
     doc2.id = "roadmap2"
 
     query_mock = MagicMock()
-    mock_db.collection.return_value.order_by.return_value = query_mock
+    (mock_db.collection.return_value
+     .order_by.return_value) = query_mock
     query_mock.limit.return_value = query_mock
 
     with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
         mock_to_thread.return_value = [doc1, doc2]
 
-        with patch("services.roadmap_services.get_roadmap", new_callable=AsyncMock) as mock_get_roadmap:
-            mock_get_roadmap.side_effect = [Roadmap(title="Roadmap 1"), Roadmap(title="Roadmap 2")]
+        with patch("services.roadmap_services.get_roadmap",
+                   new_callable=AsyncMock) as mock_get_roadmap:
+            mock_get_roadmap.side_effect = [
+                Roadmap(title="Roadmap 1"), Roadmap(title="Roadmap 2")]
 
             # Call function
             result = await get_roadmaps_paginated(limit=2)
 
             # Assert
             assert len(result["roadmaps"]) == 2
-            assert result["has_more"] == False
+            assert result["has_more"] is False
             assert result["next_cursor"] is None
 
 
@@ -278,24 +286,26 @@ async def test_delete_roadmap(mock_db, mock_redis):
 
     with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
         mock_to_thread.side_effect = [
-            doc_mock,  # For roadmap document check
-            [topic_doc],  # For topics list
-            [task_doc],  # For tasks list
-            None,  # For task deletion
-            None,  # For topic deletion
-            None,  # For roadmap deletion
+            doc_mock,
+            [topic_doc],
+            [task_doc],
+            None,
+            None,
+            None,
         ]
 
         # Call function
         result = await delete_roadmap("python-roadmap")
 
         # Assert
-        assert result["message"] == "Roadmap and all related data deleted successfully"
+        assert result["message"] == (
+            "Roadmap and all related data deleted successfully")
         mock_redis.delete.assert_called_once_with("python-roadmap")
 
 
 @pytest.mark.asyncio
-async def test_delete_roadmap_not_found(mock_db, mock_redis):  # Add mock_redis parameter
+# Add mock_redis parameter
+async def test_delete_roadmap_not_found(mock_db, mock_redis):
     # Setup
     doc_mock = MagicMock()
     doc_mock.exists = False
@@ -309,10 +319,12 @@ async def test_delete_roadmap_not_found(mock_db, mock_redis):  # Add mock_redis 
 @pytest.mark.asyncio
 async def test_delete_all_roadmaps(mock_redis):
     # Setup
-    with patch("services.roadmap_services.get_all_roadmaps_ids", new_callable=AsyncMock) as mock_get_ids:
+    with patch("services.roadmap_services.get_all_roadmaps_ids",
+               new_callable=AsyncMock) as mock_get_ids:
         mock_get_ids.return_value = ["roadmap1", "roadmap2"]
 
-        with patch("services.roadmap_services.delete_roadmap", new_callable=AsyncMock) as mock_delete:
+        with patch("services.roadmap_services.delete_roadmap",
+                   new_callable=AsyncMock) as mock_delete:
             # Call function
             result = await delete_all_roadmaps()
 
