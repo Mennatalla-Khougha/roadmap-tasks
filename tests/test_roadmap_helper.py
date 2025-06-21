@@ -116,7 +116,7 @@ class TestFetchData:
     async def test_fetch_topic_tasks_success(
             self, mock_to_thread, mock_firestore
     ):
-        mock_task_doc = MagicMock(spec=DocumentSnapshot)
+        mock_task_doc = MagicMock()
         mock_task_doc.id = "install-python"
         mock_task_doc.to_dict.return_value = {
             "task": "Install Python",
@@ -151,7 +151,7 @@ class TestFetchData:
     async def test_fetch_roadmap_topics_success(
             self, mock_to_thread, mock_fetch_tasks, mock_firestore
     ):
-        mock_topic_doc = MagicMock(spec=DocumentSnapshot)
+        mock_topic_doc = MagicMock()
         mock_topic_doc.id = "python-basics"
         mock_topic_doc.to_dict.return_value = {
             "title": "Python Basics",
@@ -209,8 +209,8 @@ class TestDeleteRoadmapHelper:
     async def test_delete_roadmap_helper_success(
             self, mock_to_thread, mock_firestore
     ):
-        mock_topic_doc = MagicMock(spec=DocumentSnapshot, id="python-basics")
-        mock_task_doc = MagicMock(spec=DocumentSnapshot, id="install-python")
+        mock_topic_doc = MagicMock(id="python-basics")
+        mock_task_doc = MagicMock(id="install-python")
 
         def to_thread_side_effect(func, *args, **kwargs):
             if "topics" in str(func):
