@@ -37,7 +37,7 @@ mock_roadmap = Roadmap(
 def mock_firestore():
     """Fixture to mock Firestore objects."""
     # Mock DocumentSnapshot
-    mock_doc_snapshot = MagicMock(spec=DocumentSnapshot)
+    mock_doc_snapshot = MagicMock()
     mock_doc_snapshot.exists = True
 
     # Mock DocumentReference
