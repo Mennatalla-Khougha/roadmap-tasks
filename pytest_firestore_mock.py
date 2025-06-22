@@ -49,12 +49,8 @@ def pytest_configure(config):
             jose.jwt._original_decode_by_firestore_mock = jose.jwt.decode
 
             def patched_encode_for_tests(claims, key_from_call_site, **kwargs):
-                # key_from_call_site is the key passed from the actual call, we ignore it
-                # and forcibly use "testing-secret-key".
-                # We also ignore any 'algorithm' passed in kwargs, in favor of "HS256".
-
-                # Remove 'algorithm' from kwargs if it exists, as we are providing it explicitly.
-                kwargs_for_original = {k: v for k, v in kwargs.items() if k != 'algorithm'}
+                kwargs_for_original = {k: v for k,
+                                       v in kwargs.items() if k != 'algorithm'}
 
                 return jose.jwt._original_encode_by_firestore_mock(
                     claims,
@@ -68,7 +64,7 @@ def pytest_configure(config):
             ):
                 effective_key = "testing-secret-key" if key is None else key
                 effective_algorithms = ["HS256"] if (
-                        algorithms is None or algorithms == [None]
+                    algorithms is None or algorithms == [None]
                 ) else algorithms
 
                 return jose.jwt._original_decode_by_firestore_mock(
