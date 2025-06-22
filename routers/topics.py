@@ -1,8 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from core.exceptions import (RoadmapNotFoundError,
                              TopicNotFoundError,
-                             InvalidTopicError)
+                             InvalidTopicError, RoadmapError)
+from core.security import get_current_user
 from schemas.roadmap_model import Topic, Task
+from schemas.user_model import TokenData
 
 from services.topic_services import (get_all_topics,
                                      get_topic,
@@ -15,35 +17,42 @@ router = APIRouter()
 
 
 @router.get("/", response_model=dict)
-async def get_all_topics_endpoint(roadmap_id: str):
+async def get_all_topics_endpoint(
+        roadmap_id: str,
+        current_user_token: TokenData = Depends(get_current_user)
+):
     """
     Get all topics from the roadmap.
+    This endpoint retrieves all topics associated with a specific roadmap.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve topics from.
+        current_user_token (TokenData): The current user's token for authentication.
+    Returns:
+        dict: A dictionary containing a list of topics.
     """
     try:
-        # Assuming you have a function to get all topics from a roadmap
         topics = await get_all_topics(roadmap_id)
         return {"topics": topics}
     except RoadmapNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except TopicNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Unexpected Error: {str(e)}")
+            status_code=500, detail=f"Unexpected Error: {str(e)}"
+        )
 
 
 @router.get("/ids", response_model=list[str])
 async def get_all_topics_ids_endpoint(roadmap_id: str):
     """
     Get all topic IDs from the roadmap.
+    This endpoint retrieves all topic IDs associated with a specific roadmap.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve topic IDs from.
+    Returns:
+        list[str]: A list of topic IDs associated with the roadmap.
     """
     try:
-        # Assuming you have a function to get all topic IDs from a roadmap
         return await get_all_topics_ids(roadmap_id)
-    except RoadmapNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except TopicNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Unexpected Error: {str(e)}")
@@ -53,14 +62,17 @@ async def get_all_topics_ids_endpoint(roadmap_id: str):
 async def get_topic_endpoint(roadmap_id: str, topic_id: str):
     """
     Get a specific topic from the roadmap.
+    This endpoint retrieves a specific topic by its ID from a specified roadmap.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve the topic from.
+        topic_id (str): The ID of the topic to retrieve.
+    Returns:
+        Topic: The Topic object associated with the specified topic ID.
     """
     try:
-        # Assuming you have a function to get a specific topic from a roadmap
         return await get_topic(roadmap_id, topic_id)
     except TopicNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except InvalidTopicError as e:
-        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(
             status_code=500, detail=f"Unexpected Error: {str(e)}")
