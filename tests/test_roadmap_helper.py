@@ -1,8 +1,5 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
-
-from google.cloud.firestore import DocumentSnapshot
-
 from core.exceptions import InvalidRoadmapError, RoadmapNotFoundError
 from schemas.roadmap_model import Roadmap, Topic, Task
 from utilis.roadmap_helper import (
