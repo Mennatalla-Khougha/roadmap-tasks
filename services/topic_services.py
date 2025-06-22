@@ -2,7 +2,7 @@ from core.exceptions import (RoadmapNotFoundError,
                              TopicNotFoundError,
                              InvalidTopicError,
                              TaskNotFoundError,
-                             InvalidTaskError)
+                             InvalidTaskError, RoadmapError)
 from schemas.roadmap_model import Topic, Task
 from services.roadmap_services import get_roadmap
 
@@ -13,6 +13,11 @@ from services.roadmap_services import get_roadmap
 async def get_all_topics(roadmap_id: str) -> list[Topic]:
     """
     Get all topics from a roadmap.
+    This function retrieves all topics from a specified roadmap by its ID.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve topics from.
+    Returns:
+        list[Topic]: A list of Topic objects associated with the roadmap.
     """
     try:
         roadmap_date = await get_roadmap(roadmap_id)
@@ -31,20 +36,28 @@ async def get_all_topics(roadmap_id: str) -> list[Topic]:
 async def get_all_topics_ids(roadmap_id: str) -> list[str]:
     """
     Get all topic IDs from a roadmap.
+    This function retrieves all topic IDs from a specified roadmap by its ID.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve topic IDs from.
+    Returns:
+        list[str]: A list of topic IDs associated with the roadmap.
     """
     try:
         topics = await get_all_topics(roadmap_id)
         return [topic.id for topic in topics]
-    except RoadmapNotFoundError as e:
-        raise RoadmapNotFoundError(
-            f"Roadmap with id {roadmap_id} not found.") from e
     except Exception as e:
-        raise TopicNotFoundError(f"Unexpected Error: {str(e)}") from e
+        raise RoadmapError(f"Unexpected Error: {str(e)}") from e
 
 
 async def get_topic(roadmap_id: str, topic_id: str) -> Topic:
     """
     Get a specific topic from a roadmap.
+    This function retrieves a specific topic by its ID from a specified roadmap.
+    Args:
+        roadmap_id (str): The ID of the roadmap to retrieve the topic from.
+        topic_id (str): The ID of the topic to retrieve.
+    Returns:
+        Topic: The Topic object associated with the specified topic ID.
     """
     try:
         topics = await get_all_topics(roadmap_id)
