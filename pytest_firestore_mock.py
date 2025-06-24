@@ -15,8 +15,13 @@ def pytest_configure(config):
     os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
 
     # 2. Mock external modules in sys.modules
+    # Create a structured mock for firestore_v1 to allow submodule imports
+    mock_firestore_v1 = MagicMock()
+    mock_firestore_v1.base_client = MagicMock()
+    mock_firestore_v1.Client = MagicMock()
+
     sys.modules['google.cloud.firestore'] = MagicMock()
-    sys.modules['google.cloud.firestore_v1'] = MagicMock()
+    sys.modules['google.cloud.firestore_v1'] = mock_firestore_v1
     sys.modules['redis'] = MagicMock()
 
     # 3. Import, reload, and patch core.security
