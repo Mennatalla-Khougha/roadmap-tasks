@@ -13,3 +13,5 @@ python-jose[cryptography]
 pydantic[email]
 pydantic-settings
 python-dotenv
+
+pytest
