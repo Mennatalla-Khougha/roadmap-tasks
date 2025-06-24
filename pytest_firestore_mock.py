@@ -18,10 +18,20 @@ def pytest_configure(config):
     os.environ["FIREBASE_TYPE"] = "service_account"
     os.environ["FIREBASE_PROJECT_ID"] = "test-project"
     os.environ["FIREBASE_PRIVATE_KEY_ID"] = "test-key-id"
+    # A more complete, but still fake, PEM key
     os.environ["FIREBASE_PRIVATE_KEY"] = (
         "-----BEGIN PRIVATE KEY-----\n"
         "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDL+5iVd3D5Qo5c\n"
-        "y2nK5f8B/3d9g2fG4h3E\n"
+        "y2nK5f8B/3d9g2fG4h3E7mQv9NK+cgH+aHR4bjtVwt4JusJGnLznvwRkJ9VeK1\n"
+        "bJvJvrOU9zFRj9J2Ta9mQ6ycZgjt8UDxE0w9LV5/HBf4qxywPYj7wJjL+rk9jn\n"
+        "w0PEhyzJ9qK9q6sJ6j4W2j9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+\n"
+        "j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj\n"
+        "9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1\n"
+        "Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+f\n"
+        "Vk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+\n"
+        "J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+\n"
+        "sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb\n"
+        "9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j+eb9w+sJ+J+fVk1Qtj9q+j\n"
         "-----END PRIVATE KEY-----\n"
     )
     os.environ["FIREBASE_CLIENT_EMAIL"] = "test-client-email@example.com"
