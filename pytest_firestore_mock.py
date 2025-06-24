@@ -14,11 +14,16 @@ def pytest_configure(config):
     os.environ["REDIS_PORT"] = "6379"
     os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
 
-    # Set dummy Firebase credentials to prevent AttributeError on import
+    # Set dummy Firebase credentials with a valid PEM format for the private key
     os.environ["FIREBASE_TYPE"] = "service_account"
     os.environ["FIREBASE_PROJECT_ID"] = "test-project"
     os.environ["FIREBASE_PRIVATE_KEY_ID"] = "test-key-id"
-    os.environ["FIREBASE_PRIVATE_KEY"] = "test-private-key"
+    os.environ["FIREBASE_PRIVATE_KEY"] = (
+        "-----BEGIN PRIVATE KEY-----\n"
+        "MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDL+5iVd3D5Qo5c\n"
+        "y2nK5f8B/3d9g2fG4h3E\n"
+        "-----END PRIVATE KEY-----\n"
+    )
     os.environ["FIREBASE_CLIENT_EMAIL"] = "test-client-email@example.com"
     os.environ["FIREBASE_CLIENT_ID"] = "test-client-id"
     os.environ["FIREBASE_AUTH_URI"] = "https://accounts.google.com/o/oauth2/auth"
